@@ -19,6 +19,15 @@ struct CameraState {
 final class FlyoverEngine {
     enum Phase { case intro, running, finish, fadeOut }
 
+    /// A ring pulse from the pin when the runner passes something.
+    struct Burst {
+        enum Kind { case fluid, fuel, both, marker, half }
+        let kind: Kind
+        let start: Double
+    }
+    static let burstDuration = 1.6
+    private(set) var bursts: [Burst] = []
+
     static let introDuration = 7.0
     static let finishDuration = 7.0
     static let fadeDuration = 1.2
@@ -122,7 +131,9 @@ final class FlyoverEngine {
             if phaseTime >= Self.introDuration { phase = .running; phaseTime = 0 }
         case .running:
             moved = metresPerSecond * dt
+            let before = distance
             distance += moved
+            detectBursts(from: before, to: min(distance, course.length))
             if distance >= course.length {
                 distance = course.length
                 phase = .finish
@@ -133,8 +144,25 @@ final class FlyoverEngine {
         case .fadeOut:
             if phaseTime >= Self.fadeDuration { nextCourse(); return }
         }
+        bursts.removeAll { time - $0.start > Self.burstDuration }
         updateHeading(dt: dt, moved: moved)
         updateCamera()
+    }
+
+    private func detectBursts(from a: Double, to b: Double) {
+        guard b > a, config.showBursts else { return }
+        let k0 = course.officialKm(at: a), k1 = course.officialKm(at: b)
+        for st in course.data.stations where st.km > k0 && st.km <= k1 {
+            let fluid = st.fluid && config.showFluid, fuel = st.fuel && config.showFuel
+            if fluid || fuel { bursts.append(Burst(kind: fluid && fuel ? .both : (fluid ? .fluid : .fuel), start: time)) }
+        }
+        let total = course.data.distanceKm
+        if total > 40, k0 < total / 2, k1 >= total / 2 {
+            bursts.append(Burst(kind: .half, start: time))
+        } else if config.showMarkers {
+            let unit = config.units.kmPerUnit
+            if floor(k1 / unit) > floor(k0 / unit) { bursts.append(Burst(kind: .marker, start: time)) }
+        }
     }
 
     private func updateHeading(dt: Double, moved: Double) {

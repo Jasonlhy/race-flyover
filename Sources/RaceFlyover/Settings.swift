@@ -159,6 +159,8 @@ struct Config: Equatable {
     var panels = PanelStyle.solid
     var displays = DisplayMode.same
     var map3D = true                  // realistic 3D terrain and buildings in Apple Maps styles
+    var showBursts = true             // ring pulse when passing stations and markers
+    var showLandmarks = true
     var pinColor = AccentColor.auto
     var trailColor = AccentColor.auto
 
@@ -198,6 +200,8 @@ final class Settings {
             if let v = d.string(forKey: "panels").flatMap(PanelStyle.init) { c.panels = v }
             if let v = d.string(forKey: "displays").flatMap(DisplayMode.init) { c.displays = v }
             if d.object(forKey: "map3D") != nil { c.map3D = d.bool(forKey: "map3D") }
+            if d.object(forKey: "showBursts") != nil { c.showBursts = d.bool(forKey: "showBursts") }
+            if d.object(forKey: "showLandmarks") != nil { c.showLandmarks = d.bool(forKey: "showLandmarks") }
             if let v = d.string(forKey: "pinColor").flatMap(AccentColor.init) { c.pinColor = v }
             if let v = d.string(forKey: "trailColor").flatMap(AccentColor.init) { c.trailColor = v }
             if d.object(forKey: "textScale") != nil { c.textScale = min(max(d.double(forKey: "textScale"), 0.6), 1.6) }
@@ -222,6 +226,8 @@ final class Settings {
             d.set(newValue.panels.rawValue, forKey: "panels")
             d.set(newValue.displays.rawValue, forKey: "displays")
             d.set(newValue.map3D, forKey: "map3D")
+            d.set(newValue.showBursts, forKey: "showBursts")
+            d.set(newValue.showLandmarks, forKey: "showLandmarks")
             d.set(newValue.pinColor.rawValue, forKey: "pinColor")
             d.set(newValue.trailColor.rawValue, forKey: "trailColor")
             d.set(newValue.textScale, forKey: "textScale")
@@ -279,8 +285,22 @@ enum CourseLibrary {
         return result
     }
 
+    /// Course ids a selection refers to ("ids:a,b,c", or the older "majors",
+    /// "all" and "course:<id>" forms).
+    static func selectedIDs(_ selection: String, settings: Settings) -> Set<String> {
+        if selection.hasPrefix("ids:") {
+            return Set(selection.dropFirst(4).split(separator: ",").map(String.init))
+        }
+        return Set(playlist(for: selection, settings: settings).map(\.id))
+    }
+
     static func playlist(for selection: String, settings: Settings) -> [Course] {
         let courses = all(settings: settings)
+        if selection.hasPrefix("ids:") {
+            let ids = Set(selection.dropFirst(4).split(separator: ",").map(String.init))
+            let picked = courses.filter { ids.contains($0.id) }
+            if !picked.isEmpty { return picked }
+        }
         if selection.hasPrefix("course:") {
             let id = String(selection.dropFirst("course:".count))
             if let c = courses.first(where: { $0.id == id }) { return [c] }

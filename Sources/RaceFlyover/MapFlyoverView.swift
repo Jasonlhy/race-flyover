@@ -11,6 +11,15 @@ private final class StationAnnotation: NSObject, MKAnnotation {
     }
 }
 
+private final class LandmarkAnnotation: NSObject, MKAnnotation {
+    let coordinate: CLLocationCoordinate2D
+    let name: String
+    init(_ l: Landmark) {
+        name = l.name
+        coordinate = CLLocationCoordinate2D(latitude: l.lat, longitude: l.lon)
+    }
+}
+
 private final class MarkerAnnotation: NSObject, MKAnnotation {
     let coordinate: CLLocationCoordinate2D
     let text: String
@@ -123,7 +132,8 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         let config = engine.config
         apply(config)
         let course = engine.course
-        let key = "\(course.id)|\(config.showFluid)|\(config.showFuel)|\(config.showMarkers)|\(config.units)|\(config.typeface)|\(appliedStyle ?? "")"
+        let landmarks = config.showLandmarks ? LandmarkStore.shared.landmarks(for: course) : []
+        let key = "\(course.id)|\(config.showFluid)|\(config.showFuel)|\(config.showMarkers)|\(config.units)|\(config.typeface)|\(appliedStyle ?? "")|\(landmarks.count)"
         if key != builtKey { rebuild(course, config: config, key: key) }
 
         let cam = engine.camera
@@ -136,27 +146,107 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         diagnose()
     }
 
+    /// Puck parts: contact shadow, darker base, white top with coloured centre.
+    private let pinShadow = CALayer()
+    private let pinBase = CALayer()
+    private let pinTop = CALayer()
+
+    private func buildPin() {
+        let r: CGFloat = 15
+        let scale = window?.backingScaleFactor ?? 2
+        func disc(_ size: CGFloat, _ draw: @escaping (CGContext, CGRect) -> Void) -> CGImage? {
+            let image = Self.image(size: size, draw)
+            var rect = CGRect(x: 0, y: 0, width: size, height: size)
+            return image.cgImage(forProposedRect: &rect, context: nil, hints: [.ctm: AffineTransform(scale: scale)])
+        }
+        let runner = theme.runner
+        let shadowSize = r * 4
+        pinShadow.contents = disc(shadowSize) { ctx, rect in
+            Draw.radialGlow(ctx, center: CGPoint(x: rect.midX, y: rect.midY), radius: r * 1.9,
+                            color: NSColor.black.withAlphaComponent(0.6))
+        }
+        pinBase.contents = disc(r * 2) { ctx, rect in
+            ctx.setFillColor(NSColor(white: 0.72, alpha: 1).cgColor)
+            ctx.fillEllipse(in: rect)
+        }
+        pinTop.contents = disc(r * 2) { ctx, rect in
+            ctx.setFillColor(NSColor.white.cgColor)
+            ctx.fillEllipse(in: rect)
+            ctx.setFillColor(runner.cgColor)
+            ctx.fillEllipse(in: rect.insetBy(dx: r * 0.36, dy: r * 0.36))
+        }
+        for (layer, size) in [(pinShadow, shadowSize), (pinBase, r * 2), (pinTop, r * 2)] {
+            layer.contentsScale = scale
+            layer.bounds = CGRect(x: 0, y: 0, width: size, height: size)
+            layer.actions = ["position": NSNull(), "transform": NSNull(), "contents": NSNull()]
+            if layer.superlayer == nil { pinLayer.addSublayer(layer) }
+        }
+        pinLayer.contents = nil
+        pinLayer.bounds = CGRect(x: 0, y: 0, width: shadowSize, height: shadowSize)
+    }
+
+    private var lastBurstStart = -1.0
+
+    /// Spawns an expanding, fading ring under the puck for each new burst.
+    private func spawnBursts(squash: CGFloat) {
+        guard let engine else { return }
+        for burst in engine.bursts where burst.start > lastBurstStart {
+            lastBurstStart = burst.start
+            for (i, color) in theme.color(for: burst.kind).enumerated() {
+                let ring = CAShapeLayer()
+                let r: CGFloat = 16
+                ring.path = CGPath(ellipseIn: CGRect(x: -r, y: -r, width: r * 2, height: r * 2), transform: nil)
+                ring.fillColor = color.withAlphaComponent(0.15).cgColor
+                ring.strokeColor = color.cgColor
+                ring.lineWidth = 3
+                ring.position = CGPoint(x: pinLayer.bounds.midX, y: pinLayer.bounds.midY)
+                ring.opacity = 0
+                pinLayer.insertSublayer(ring, below: pinShadow)
+                let start = CATransform3DMakeScale(1.1, 1.1 * squash, 1)
+                let end = CATransform3DMakeScale(7, 7 * squash, 1)
+                let grow = CABasicAnimation(keyPath: "transform")
+                grow.fromValue = NSValue(caTransform3D: start)
+                grow.toValue = NSValue(caTransform3D: end)
+                grow.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                let fade = CABasicAnimation(keyPath: "opacity")
+                fade.fromValue = 0.95
+                fade.toValue = 0
+                let group = CAAnimationGroup()
+                group.animations = [grow, fade]
+                group.duration = FlyoverEngine.burstDuration
+                group.beginTime = CACurrentMediaTime() + Double(i) * 0.18
+                group.fillMode = .backwards
+                ring.transform = end
+                ring.add(group, forKey: "burst")
+                DispatchQueue.main.asyncAfter(deadline: .now() + FlyoverEngine.burstDuration + 0.4) { ring.removeFromSuperlayer() }
+            }
+        }
+    }
+
     private func placePin(at coordinate: CLLocationCoordinate2D) {
         if pinColor != theme.runner {
             pinColor = theme.runner
-            let size: CGFloat = 60
-            let image = Self.image(size: size) { [theme] ctx, r in
-                Draw.radialGlow(ctx, center: CGPoint(x: r.midX, y: r.midY), radius: 30, color: theme.runner.withAlphaComponent(0.45))
-                Theme.drawPin(ctx, at: CGPoint(x: r.midX, y: r.midY), radius: 15, color: theme.runner)
-            }
-            let scale = window?.backingScaleFactor ?? 2
-            var rect = CGRect(x: 0, y: 0, width: size, height: size)
-            pinLayer.contents = image.cgImage(forProposedRect: &rect, context: nil, hints: [.ctm: AffineTransform(scale: scale)])
-            pinLayer.contentsScale = scale
-            pinLayer.bounds = CGRect(x: 0, y: 0, width: size, height: size)
+            buildPin()
         }
         // Same camera MapKit just received, so the pin lands exactly on the route.
         let p = map.convert(coordinate, toPointTo: self)
         let onScreen = p.x.isFinite && p.y.isFinite && bounds.insetBy(dx: -60, dy: -60).contains(p)
+        // Lie flat on the ground: foreshorten by the map's actual pitch (MapKit may
+        // cap it), and lift the white top above the base to show its thickness.
+        let pitch = map.camera.pitch * .pi / 180
+        let squash = CGFloat(max(0.12, cos(pitch)))
+        let lift = 5 * CGFloat(sin(pitch))
+        let flatten = CATransform3DMakeScale(1, squash, 1)
+        let mid = CGPoint(x: pinLayer.bounds.midX, y: pinLayer.bounds.midY)
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         pinLayer.isHidden = !onScreen
         if onScreen { pinLayer.position = CGPoint(x: p.x.rounded(), y: p.y.rounded()) }
+        for layer in [pinShadow, pinBase, pinTop] { layer.transform = flatten }
+        spawnBursts(squash: squash)
+        pinShadow.position = mid
+        pinBase.position = mid
+        pinTop.position = CGPoint(x: mid.x, y: mid.y + lift)   // unflipped: +y is up
         CATransaction.commit()
     }
 
@@ -251,6 +341,9 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
                 annotations.append(MarkerAnnotation("HALF", at: course.sample(at: course.length / 2).coordinate, highlight: true))
             }
         }
+        if config.showLandmarks {
+            annotations += LandmarkStore.shared.landmarks(for: course).map(LandmarkAnnotation.init)
+        }
         annotations.append(MarkerAnnotation("START", at: coords[0]))
         annotations.append(MarkerAnnotation("FINISH", at: coords[coords.count - 1], highlight: true))
         map.addAnnotations(annotations)
@@ -292,6 +385,20 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
                 Draw.stationBadge(ctx, center: CGPoint(x: r.midX, y: r.midY), radius: 12, station: st.station,
                                   theme: theme, alpha: 1)
             }
+            view.zPriority = .defaultSelected
+        case let l as LandmarkAnnotation:
+            let label = NSMutableAttributedString(attributedString: Draw.text("★ ", size: 12, weight: .bold, color: Theme.landmark))
+            label.append(Draw.text(l.name, size: 12.5, weight: .semibold, color: .white))
+            let ts = label.size()
+            let w = ceil(ts.width + 18), h = ceil(ts.height + 8)
+            view.image = NSImage(size: NSSize(width: w, height: h), flipped: true) { rect in
+                guard let ctx = NSGraphicsContext.current?.cgContext else { return false }
+                Draw.roundedRect(ctx, rect.insetBy(dx: 0.5, dy: 0.5), radius: h / 2,
+                                 fill: NSColor.black.withAlphaComponent(0.7), stroke: Theme.landmark.withAlphaComponent(0.85))
+                label.draw(at: CGPoint(x: 9, y: 4))
+                return true
+            }
+            view.centerOffset = CGPoint(x: 0, y: -h)
             view.zPriority = .defaultSelected
         case let m as MarkerAnnotation:
             let text = Draw.text(m.text, size: 11, weight: .heavy, color: m.highlight ? .black : .white, tracking: 1)

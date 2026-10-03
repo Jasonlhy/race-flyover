@@ -35,6 +35,19 @@ struct Theme {
         return t
     }
 
+    /// Gold for landmark labels: distinct from fluids (blue) and fuel (orange).
+    static let landmark = hex(0xFFC93C)
+
+    func color(for burst: FlyoverEngine.Burst.Kind) -> [NSColor] {
+        switch burst {
+        case .fluid: return [fluid]
+        case .fuel: return [fuel]
+        case .both: return [fluid, fuel]
+        case .marker: return [NSColor.white]
+        case .half: return [accent]
+        }
+    }
+
     /// Large location pin: coloured disc, thick white ring, soft drop shadow.
     static func drawPin(_ ctx: CGContext, at c: CGPoint, radius r: CGFloat, color: NSColor) {
         ctx.saveGState()

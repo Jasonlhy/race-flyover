@@ -208,6 +208,9 @@ final class StylizedView: NSView {
         let labelScale = s * CGFloat(config.textScale)
         if config.showMarkers { drawMarkers(ctx, course: course, proj: proj, D: D, scale: labelScale, currentKm: currentKm) }
         drawStartFinish(ctx, course: course, proj: proj, D: D, scale: labelScale)
+        if config.showLandmarks {
+            drawLandmarks(ctx, course: course, proj: proj, D: D, scale: labelScale, currentKm: currentKm)
+        }
         drawStations(ctx, course: course, proj: proj, D: D, scale: labelScale, currentKm: currentKm, config: config)
         drawRunner(ctx, at: runnerPoint, proj: proj, D: D, scale: s, time: engine.time)
 
@@ -382,6 +385,33 @@ final class StylizedView: NSView {
         }
     }
 
+    /// Gold star labels standing at landmarks coming up along the route.
+    private func drawLandmarks(_ ctx: CGContext, course: Course, proj: Projector, D: Double, scale s: CGFloat,
+                               currentKm: Double) {
+        let ahead = engine?.config.units.kmPerUnit ?? 1
+        for l in LandmarkStore.shared.landmarks(for: course) where l.km > currentKm - 0.5 && l.km < currentKm + 5 * ahead {
+            let routeZ = point3(course, km: l.km).z
+            let at = course.local(lat: l.lat, lon: l.lon)
+            let ground = SIMD3(at.x, at.y, routeZ)
+            guard let (base, z) = proj.project(ground), let (top, _) = proj.project(ground + SIMD3(0, 0, D * 0.11)) else { continue }
+            var a = depthAlpha(z, D: D * 1.5)
+            if l.km < currentKm { a *= CGFloat(max(0, 1 - (currentKm - l.km) / 0.5)) }
+            guard a > 0.03 else { continue }
+            ctx.setStrokeColor(Theme.landmark.withAlphaComponent(0.85 * a).cgColor)
+            ctx.setLineWidth(1.6 * s)
+            ctx.move(to: base)
+            ctx.addLine(to: top)
+            ctx.strokePath()
+            ctx.setFillColor(Theme.landmark.withAlphaComponent(a).cgColor)
+            ctx.fillEllipse(in: CGRect(x: base.x - 2.5 * s, y: base.y - 1.5 * s, width: 5 * s, height: 3 * s))
+            let label = NSMutableAttributedString(attributedString: Draw.text("★ ", size: 12 * s, weight: .bold,
+                                                                              color: Theme.landmark.withAlphaComponent(a)))
+            label.append(Draw.text(l.name, size: 13 * s, weight: .semibold, color: NSColor.white.withAlphaComponent(a)))
+            Draw.pill(ctx, label, above: top, fill: NSColor.black.withAlphaComponent(0.62 * a),
+                      stroke: Theme.landmark.withAlphaComponent(0.7 * a), padding: 4.5 * s)
+        }
+    }
+
     private func drawStations(_ ctx: CGContext, course: Course, proj: Projector, D: Double, scale s: CGFloat,
                               currentKm: Double, config: Config) {
         let stations = course.data.stations.filter { ($0.fluid && config.showFluid) || ($0.fuel && config.showFuel) }
@@ -429,20 +459,79 @@ final class StylizedView: NSView {
         }
     }
 
+    /// A circle lying flat on the ground (horizontal plane at `c.z`), projected.
+    private func groundCircle(_ proj: Projector, center c: SIMD3<Double>, radius r: Double, segments: Int = 48) -> CGPath? {
+        var pts: [CGPoint] = []
+        pts.reserveCapacity(segments)
+        for i in 0..<segments {
+            let a = Double(i) / Double(segments) * 2 * .pi
+            guard let (pt, _) = proj.project(c + SIMD3(cos(a) * r, sin(a) * r, 0)) else { return nil }
+            pts.append(pt)
+        }
+        let path = CGMutablePath()
+        path.addLines(between: pts)
+        path.closeSubpath()
+        return path
+    }
+
+    /// The runner as a puck lying on the ground: contact shadow, a darker base
+    /// peeking out under a white top (so it reads as having thickness), the
+    /// coloured centre, and a pulse ring spreading across the ground. All of it
+    /// is projected, so it foreshortens with the camera like the route does.
     private func drawRunner(_ ctx: CGContext, at p: SIMD3<Double>, proj: Projector, D: Double, scale s: CGFloat,
                             time: Double) {
-        guard let (base, _) = proj.project(p) else { return }
-        if let (top, _) = proj.project(p + SIMD3(0, 0, D * 0.1)) {
-            Draw.linearGradient(ctx, rect: CGRect(x: base.x - 1.5 * s, y: min(top.y, base.y), width: 3 * s,
-                                                  height: abs(base.y - top.y)),
-                                from: theme.runner.withAlphaComponent(0), to: theme.runner.withAlphaComponent(0.7),
-                                start: top, end: base)
+        guard proj.project(p) != nil else { return }
+        // Size it so the puck is ~15 points in radius at the look-at distance.
+        let r = Double(19 * s) * D / proj.focal
+        let thickness = r * 0.32
+        let top = p + SIMD3(0, 0, thickness)
+
+        // Bursts when passing a station, a distance marker or halfway.
+        if let engine {
+            for burst in engine.bursts {
+                let t = (engine.time - burst.start) / FlyoverEngine.burstDuration
+                guard t >= 0, t < 1 else { continue }
+                for (i, color) in theme.color(for: burst.kind).enumerated() {
+                    let tt = max(0, t - Double(i) * 0.12)
+                    let ease = 1 - pow(1 - tt, 3)
+                    guard let ring = groundCircle(proj, center: p, radius: r * (1.2 + 7 * ease)) else { continue }
+                    ctx.addPath(ring)
+                    ctx.setFillColor(color.withAlphaComponent(0.16 * CGFloat(1 - tt)).cgColor)
+                    ctx.fillPath()
+                    ctx.addPath(ring)
+                    ctx.setStrokeColor(color.withAlphaComponent(0.9 * CGFloat(pow(1 - tt, 1.4))).cgColor)
+                    ctx.setLineWidth(CGFloat(4.5 * (1 - tt) + 1) * s)
+                    ctx.strokePath()
+                }
+            }
         }
-        let pulse = CGFloat((time * 0.9).truncatingRemainder(dividingBy: 1))
-        let ring = (16 + 30 * pulse) * s
-        ctx.setStrokeColor(theme.runner.withAlphaComponent(0.75 * (1 - pulse)).cgColor)
-        ctx.setLineWidth(2.5 * s)
-        ctx.strokeEllipse(in: CGRect(x: base.x - ring, y: base.y - ring * 0.6, width: ring * 2, height: ring * 1.2))
-        Theme.drawPin(ctx, at: base, radius: 15 * s, color: theme.runner)
+        let pulse = (time * 0.9).truncatingRemainder(dividingBy: 1)
+        if let ring = groundCircle(proj, center: p, radius: r * (1.25 + 2.2 * pulse)) {
+            ctx.addPath(ring)
+            ctx.setStrokeColor(theme.runner.withAlphaComponent(0.7 * CGFloat(1 - pulse)).cgColor)
+            ctx.setLineWidth(2.5 * s)
+            ctx.strokePath()
+        }
+        if let shadow = groundCircle(proj, center: p, radius: r * 1.18) {
+            ctx.saveGState()
+            ctx.setShadow(offset: .zero, blur: 10 * s, color: NSColor.black.withAlphaComponent(0.7).cgColor)
+            ctx.addPath(shadow)
+            ctx.setFillColor(NSColor.black.withAlphaComponent(0.45).cgColor)
+            ctx.fillPath()
+            ctx.restoreGState()
+        }
+        guard let base = groundCircle(proj, center: p, radius: r),
+              let rim = groundCircle(proj, center: top, radius: r),
+              let centre = groundCircle(proj, center: top, radius: r * 0.64) else { return }
+        ctx.addPath(base)
+        ctx.setFillColor(NSColor(white: 0.72, alpha: 1).cgColor)
+        ctx.fillPath()
+        ctx.addPath(rim)
+        ctx.setFillColor(NSColor.white.cgColor)
+        ctx.fillPath()
+        ctx.addPath(centre)
+        ctx.setFillColor(theme.runner.cgColor)
+        ctx.fillPath()
     }
+
 }

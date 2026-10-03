@@ -295,8 +295,14 @@ struct HUDRenderer {
     }
 
     private func areaCaption(maxWidth: CGFloat) -> Line {
-        let text = area?.name ?? course.data.city.components(separatedBy: ",").first ?? ""
-        let pin = Draw.text("⌖ ", size: 11 * s, weight: .bold, color: theme.accent)
+        // While passing a landmark, name it instead of the neighbourhood.
+        let passing = engine.config.showLandmarks
+            ? LandmarkStore.shared.landmarks(for: course).first { abs($0.km - currentKm) < 0.3 }
+            : nil
+        let text = passing?.name ?? area?.name ?? course.data.city.components(separatedBy: ",").first ?? ""
+        let pin = passing != nil
+            ? Draw.text("★ ", size: 11 * s, weight: .bold, color: Theme.landmark)
+            : Draw.text("⌖ ", size: 11 * s, weight: .bold, color: theme.accent)
         let body = truncated(text, size: 11.5 * s, color: theme.text, width: max(60 * s, maxWidth) - pin.size().width,
                              weight: .medium)
         let s = NSMutableAttributedString(attributedString: pin)

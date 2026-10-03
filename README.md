@@ -1,127 +1,129 @@
-# Race Flyover — a macOS screensaver for learning marathon courses
+# marathon-screensaver
 
-Race Flyover animates a runner along a race course and flies a camera behind it.
-Fluid and fuel stations stand along the route as pins, with distance markers, an
-elevation curtain and a live elevation profile. It works as a detailed street-level
-flyover or as a calm overview running in the background.
+## Race Flyover: get to know your marathon course while your Mac rests
+
+Race Flyover is a screensaver for your Mac that flies you along the world's big marathon courses.
+A runner travels the route from start to finish while the camera glides behind, so over time you
+learn the turns, the hills, where the water and gel stations are, and which landmarks you'll pass.
+
+Leave it running in the background for a calm, beautiful course map, or slow it down and zoom in
+for a detailed street-by-street preview before race day.
+
+![Race Flyover approaching Tower Bridge on the London Marathon course](docs/screenshots/demo.gif)
 
 ## Screenshots
 
-![London Marathon over Apple Maps satellite imagery](docs/screenshots/apple-maps-london.jpg)
-*London Marathon over Apple Maps imagery, approaching Tower Bridge at 20K: minimap with the current neighbourhood, next fluid and fuel stations, and the elevation profile. (Rendered with the snapshot tool; the live screensaver adds Apple Maps' 3D terrain and buildings.)*
+![London Marathon over Apple Maps, approaching Tower Bridge](docs/screenshots/apple-maps-london.jpg)
+*London over Apple Maps imagery, with Tower Bridge and the Tower of London coming up, the next water and gel
+stations, a minimap of the whole course, and the elevation profile along the bottom.*
 
 | | |
 |---|---|
-| ![Boston Marathon in Midnight](docs/screenshots/midnight-boston.jpg) | ![New York City Marathon in Daylight, miles](docs/screenshots/daylight-nyc.jpg) |
-| **Midnight** · Boston, nearing Heartbreak Hill, with the elevation curtain | **Daylight** · New York in miles, with fluid stations every mile |
-| ![Tokyo Marathon in Neon Grid with Avenir Next](docs/screenshots/neon-tokyo.jpg) | ![Berlin Marathon intro card in Blueprint](docs/screenshots/intro-berlin.jpg) |
-| **Neon Grid** · Tokyo, set in Avenir Next | **Intro card** · Berlin in Blueprint, before the camera swoops in |
-| ![Chicago Marathon finish card](docs/screenshots/finish-chicago.jpg) | |
-| **Finish card** · Chicago, as the camera pulls back over the course | |
+| ![Boston Marathon: the pin pulses as it passes a water station](docs/screenshots/pulse-boston.jpg) | ![New York City Marathon in the Daylight look, in miles](docs/screenshots/daylight-nyc.jpg) |
+| **Boston** · the pin sends out a ring as it passes a water station | **New York** · the Daylight look, in miles |
+| ![Tokyo Marathon in the Neon Grid look](docs/screenshots/neon-tokyo.jpg) | ![Kyoto Marathon title card in the Blueprint look](docs/screenshots/intro-kyoto.jpg) |
+| **Tokyo** · the Neon Grid look | **Kyoto** · each course opens with a title card |
+| ![Chicago Marathon finish card](docs/screenshots/finish-chicago.jpg) | ![Settings: choosing courses](docs/screenshots/settings-courses.jpg) |
+| **Chicago** · and closes with a finish card | **Settings** · pick exactly which races to fly |
+
+## What you'll see
+
+- **18 big-city marathons**, including all seven World Marathon Majors (Boston, London, Berlin,
+  Chicago, New York, Tokyo and Sydney) plus Kyoto, Amsterdam, Paris, Valencia, Los Angeles, Houston,
+  Mexico City, Osaka, Singapore, Taipei and Shanghai. You can also add your own race from a GPX file.
+- **Water and fuel stations** along the route, with the next ones always shown: what they hand out
+  and how far away they are.
+- **Distance markers** every kilometre or mile, and a marker at halfway.
+- **Famous landmarks** labelled as you approach them, such as Tower Bridge, the Brandenburg Gate or
+  Kyoto's Togetsukyo Bridge.
+- **A minimap** of the whole course showing where you are, with the name of the neighbourhood
+  you're running through.
+- **An elevation profile** so you can see the hills coming, plus the total climb.
+- **The runner's pin** lying on the ground with a trail behind it, and a pulse whenever you pass a
+  station, a marker or halfway.
+- **A title card** at the start of each course and a **finish card** at the end, placed low on the
+  screen so they never clash with the clock macOS shows on the lock screen.
+
+## Settings
+
+Open **System Settings › Screen Saver**, choose **Race Flyover** and click **Options…**. The
+settings are grouped like the rest of System Settings:
+
+![Settings: what's shown along the route](docs/screenshots/settings-route.jpg)
+
+| Group | What you can change |
+|---|---|
+| **Courses** | Tick the races you want; they play one after another. Import your own race. Choose how long a full course takes, from a two-minute tour to a real-time four hours. |
+| **Camera** | Follow behind the runner, keep north at the top, or watch the whole course from above with a slow orbit. Adjust how steeply the camera looks down and how close it sits. |
+| **Appearance** | Fly over Apple Maps (satellite or street map, with optional 3D buildings), or one of five drawn looks: Midnight, Neon Grid, Daylight, Blueprint and Minimal Mono. Choose the pin and trail colours. |
+| **Overlay** | Show all the information panels, just the essentials, or nothing. Solid panels or Apple's Liquid Glass. Kilometres or miles. Pick a typeface and text size. |
+| **On the Route** | Turn water stations, fuel stations, distance markers, the passing pulse and landmarks on or off. |
+| **Performance** | Choose what happens on multiple screens and set the frame rate. |
+
+## What you need
+
+- A Mac running **macOS 14 Sonoma or later** (Apple silicon or Intel). Liquid Glass panels need
+  **macOS 26** or later.
+- An **internet connection** the first time you use the Apple Maps looks, and for neighbourhood
+  names and landmarks. The drawn looks work completely offline.
+- To build it yourself: **Xcode** or Apple's free Command Line Tools.
+
+## How it works
+
+Each course is a list of points along the real race route, with the height of the ground at each
+point and the positions of the water and fuel stations. Race Flyover moves a runner along those
+points at the speed you choose, and a virtual camera follows from behind and above, turning
+smoothly with the road.
+
+For the Apple Maps looks, Race Flyover uses Apple Maps itself, so you see real streets, rivers,
+parks and, if you like, 3D buildings. For the drawn looks, it sketches the route, a grid and the
+hills itself, which is lighter and works without the internet.
+
+On top of that sit the information panels: course name and flag, distance, the next stations, the
+minimap and the elevation profile. Neighbourhood names and landmarks come from Apple Maps too, and
+are remembered so each course only needs looking up once.
 
 ## Build & install
 
-```bash
-./build.sh install
-```
+1. Download or clone this project.
+2. Open **Terminal** in the project folder and run:
 
-Then open **System Settings › Screen Saver**, pick **Race Flyover**, and click **Options…**.
+   ```bash
+   ./build.sh install
+   ```
 
-- `./build.sh` builds `build/RaceFlyover.saver` and `build/RaceFlyoverPreview.app` (no Xcode project needed, just the Swift toolchain).
-- `./build.sh preview` opens the preview app, which runs the screensaver in a window. Keys: **Space** pause, **← / →** move 1 km, **N** next course, **⌘,** Options.
+3. Open **System Settings › Screen Saver**, scroll down to **Other**, and choose **Race Flyover**.
+4. Click **Options…** to pick your courses and style.
 
-## Options
+To try it in a window first, run `./build.sh preview`. In the preview window, the Space bar pauses,
+the left and right arrows jump a kilometre, and **N** skips to the next course.
 
-| Option | What it does |
-| --- | --- |
-| Course | World Marathon Majors (cycle), all courses (cycle), or one course. **Import GPX…** adds your own. |
-| Flyover time | 2 min to 4 h for the full course. The label shows the equivalent pace; ~3–4 h is close to real time. |
-| Camera | **Chase** follows the runner and turns with the route. **North up** follows without rotating. **Overview** shows the whole course with a slow orbit, good for background use. |
-| Tilt | 0° is a top-down map; 70°+ is a low flyover with the horizon in view. |
-| Zoom | Camera distance from the runner, from ~220 m (street level) to ~8 km (whole city). |
-| Visuals | **Apple Maps Satellite**, **Apple Maps Satellite + labels**, **Apple Maps (Dark)** and **Apple Maps (Light)** fly over live Apple Maps with realistic 3D terrain and buildings (needs internet). **Midnight**, **Neon Grid**, **Daylight**, **Blueprint** and **Minimal Mono** are stylized and work offline. |
-| 3D buildings & terrain | Apple Maps styles only. On: realistic 3D city and terrain. Off: flat Apple Maps, roughly a third of the CPU load. |
-| Hill exaggeration | Vertical scale of the elevation curtain in stylized visuals. |
-| Overlay | Full HUD (title with country flag; distance panel with a minimap of the whole course and the current neighbourhood; next fluid/fuel; elevation profile), Minimal, or Off. Units in km or miles. |
-| Panels | **Solid**, **Liquid Glass** or **Liquid Glass (Clear)** (macOS 26+): real system glass behind the HUD panels and title cards, refracting the course moving underneath. |
-| Typeface | SF Pro, SF Pro Rounded, New York, SF Mono, Avenir Next, Helvetica Neue, Futura, Gill Sans or DIN Condensed, with overlay size S / M / L / XL. |
-| Pin & trail | Colours for the runner's pin and its trail (or match the visual style). In Apple Maps styles the route is drawn once with a border in the trail colour (blue by default) and the pin shows progress, which avoids MapKit flicker. |
-| Show | Toggle fluid stations, fuel stations and distance markers. |
-| Displays | **Same course on every screen** (synced), **Different course on each screen**, or **Main display only** (other screens stay black; the biggest saving on multi-screen setups). |
-| Frame rate | 30 fps (recommended) or 60 fps. Frames are synced to the display refresh either way. |
-
-Each course plays as: title card → swoop from the overview into the chase camera → run → finish card → pull back → next course.
-The title and finish cards sit at the bottom of the screen, clear of the clock macOS shows at the top while the screensaver runs.
-
-## Courses
-
-Built in: **Boston, London, Berlin, Chicago, New York, Tokyo, Sydney** (the Majors)
-plus Amsterdam, Valencia, Paris, Los Angeles, Houston, Mexico City, Osaka, Kyoto, Singapore,
-Taipei and Shanghai.
-
-- Geometry, elevation and aid-station waypoints come from the community collection
-  [distanzrunning/gpx](https://github.com/distanzrunning/gpx). That repo doesn't state a
-  licence, so treat the bundled data as personal-use only.
-- Kyoto's route comes from [GoAndRace](https://www.goandrace.com/en/map/2025/kyoto-marathon-2025-kyoto-course-map-1.php)
-  and its fluid and food stations from the official 2025 participant guide.
-- Distances are scaled to the official 42.195 km, so markers and stations line up with
-  race kilometres even though GPS traces run a little long.
-- NYC's bridge climbs are restored (terrain data reads the water, not the deck), and its
-  stations follow the fluids-every-mile-from-mile-3 setup.
-- For courses without station data (Amsterdam, Valencia, Paris, Houston, Mexico City,
-  Osaka, Singapore, Taipei, Shanghai), stations are **estimated every 5 km**. The HUD flags
-  this. Import the official GPX for the real ones.
-- Courses change year to year, so always check the race's official course map and athlete
-  guide before race day.
-
-### Your own races
-
-- **Import GPX…** in Options converts a GPX track (or route) into a course. Waypoints
-  whose name or description mentions water, aid, drink, sponge, gel, food, banana, etc.
-  become fluid/fuel stations; with none, stations are estimated every 5 km.
-- If the screensaver's sandbox blocks the file picker, drop the `.gpx` into `Courses/` and run
-  `./build.sh install`. Files there are bundled into the screensaver.
-
-### Rebuilding course data
-
-```bash
-python3 tools/build_courses.py          # all courses
-python3 tools/build_courses.py boston   # one course
-python3 tools/route_viewer.py           # writes build/route_viewer.html to eyeball routes + stations
-```
-
-Edit the `COURSES` list in `tools/build_courses.py` to add courses, bridge corrections or
-station overrides.
+**Adding your own race:** in Options, open **Courses** and click **Import GPX…**. Most race websites
+and running apps can export a course as a GPX file. If the file includes points named "water", "aid",
+"gel" or "food", they become stations. You can also drop GPX files into the `Courses` folder of this
+project and run `./build.sh install` again.
 
 ## Notes
 
-- **Apple Maps inside the screensaver.** The screensaver host (legacyScreenSaver) reports its
-  window as not visible even while the screensaver is on screen, and MapKit responds by tearing
-  down its Metal surface, leaving a grey map. Race Flyover reports windows that host a live map
-  as visible (which is true while the screensaver runs) so MapKit keeps drawing. If the live map
-  still can't draw, it falls back to flat Apple Maps imagery rendered with `MKMapSnapshotter`
-  under the route, and to Midnight if Apple Maps is unreachable (for example offline).
-- Neighbourhood names come from Apple's reverse geocoding, looked up roughly every 350 m and
-  cached, so a replayed course doesn't repeat lookups.
-- Map diagnostics go to the unified log: `log show --last 10m --predicate 'subsystem == "com.raceflyover"'`.
-- The host creates a new view whenever the preview restarts and can keep old ones attached to
-  hidden windows, still animating. The newest view on each screen takes over; older ones on the
-  same screen stop and release their maps, so only one map renders per screen.
-- In the small System Settings thumbnail, Apple Maps styles show as Midnight.
-- **Performance.** Measured at 2560×1440 with the live Apple Maps satellite style: about 93% of
-  one CPU core with 3D buildings & terrain on, about 33% with it off (30 fps); 60 fps adds roughly
-  10%. Almost all of that is MapKit itself. Stylized visuals are far lighter. Each screen renders its
-  own copy, so **Main display only** roughly halves the load on two screens. Frame timing is logged
-  to `log show --predicate 'subsystem == "com.raceflyover" AND category == "perf"'`.
-- Snapshot testing: `build/RaceFlyoverPreview.app/Contents/MacOS/RaceFlyoverPreview --snapshot out.png --course boston --progress 0.78 --style daylight`
-  (see `Sources/Preview/main.swift` for all flags; `--list` prints the loaded courses).
+**Smooth playback.** The Apple Maps looks with 3D buildings are the most demanding: they can keep a
+Mac's processor quite busy. If playback isn't smooth:
 
-## Layout
+- set **Frame rate** to 30 fps (it's still smooth, and much lighter than 60);
+- turn off **3D buildings & terrain** (this cuts the work to about a third);
+- with more than one screen, choose **Main display only**: each screen draws its own copy otherwise.
 
-```
-Sources/RaceFlyover/   screensaver (ScreenSaverView, engine, renderers, HUD, options, GPX import)
-Sources/Preview/       preview app + snapshot tool
-Resources/Courses/     generated course JSON
-Courses/               your extra GPX files (bundled at build time)
-tools/                 course data builder and route viewer
-```
+The drawn looks (Midnight, Neon Grid and so on) are much lighter than any Apple Maps look.
+
+**Accuracy.** The courses follow published race routes and are scaled to exactly 42.195 km, but
+routes change from year to year. Where a race didn't publish its stations, Race Flyover shows them
+every 5 km and says so on screen. Always check your race's official course map and runner guide
+before race day.
+
+**Where the course data comes from.** Most routes and stations come from the community collection
+[distanzrunning/gpx](https://github.com/distanzrunning/gpx), which doesn't state a licence. Kyoto's
+route comes from [GoAndRace](https://www.goandrace.com/en/map/2025/kyoto-marathon-2025-kyoto-course-map-1.php)
+and its stations from the official 2025 runner guide. Please keep this project for personal use.
+
+**For tinkerers.** `tools/build_courses.py` rebuilds the course files, and the preview app can save
+still pictures and short animations of any course; the options are listed at the top of
+`Sources/Preview/main.swift`.

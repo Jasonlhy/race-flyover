@@ -38,15 +38,15 @@ MI = 1.609344
 
 COURSES = [
     # World Marathon Majors
-    {"id": "boston", "country": "US", "file": "boston_marathon.json", "name": "Boston Marathon",
+    {"id": "boston", "landmarks": ['Wellesley College', 'Boston College', 'Citgo Sign', 'Fenway Park', 'Boston Public Library', 'Trinity Church Boston'], "country": "US", "file": "boston_marathon.json", "name": "Boston Marathon",
      "city": "Hopkinton → Boston, USA", "month": "April", "major": True},
-    {"id": "london", "country": "GB", "file": "london_marathon_1.json", "name": "London Marathon",
+    {"id": "london", "landmarks": ['Cutty Sark', 'Tower Bridge', 'One Canada Square', 'Tower of London', 'London Eye', 'Elizabeth Tower', 'Buckingham Palace'], "country": "GB", "file": "london_marathon_1.json", "name": "London Marathon",
      "city": "Greenwich → The Mall, UK", "month": "April", "major": True},
-    {"id": "berlin", "country": "DE", "file": "berlin_marathon.json", "name": "Berlin Marathon",
+    {"id": "berlin", "landmarks": ['Victory Column', 'Reichstag Building', 'Rathaus Schöneberg', 'Kaiser Wilhelm Memorial Church', 'KaDeWe', 'Potsdamer Platz', 'Gendarmenmarkt', 'Brandenburg Gate'], "country": "DE", "file": "berlin_marathon.json", "name": "Berlin Marathon",
      "city": "Berlin, Germany", "month": "September", "major": True},
-    {"id": "chicago", "country": "US", "file": "chicargo_marathon.json", "name": "Chicago Marathon",
+    {"id": "chicago", "landmarks": ['Buckingham Fountain', 'Lincoln Park Zoo', 'Willis Tower', 'United Center', 'Chinatown Gate Chicago', 'Art Institute of Chicago'], "country": "US", "file": "chicargo_marathon.json", "name": "Chicago Marathon",
      "city": "Chicago, USA", "month": "October", "major": True},
-    {"id": "nyc", "country": "US", "file": "new_york_city_marathon.json", "name": "New York City Marathon",
+    {"id": "nyc", "landmarks": ['Verrazzano-Narrows Bridge', 'Barclays Center', 'Pulaski Bridge', 'Queensboro Bridge', 'Willis Avenue Bridge', 'Solomon R. Guggenheim Museum', 'Columbus Circle', 'Tavern on the Green'], "country": "US", "file": "new_york_city_marathon.json", "name": "New York City Marathon",
      "city": "Staten Island → Central Park, USA", "month": "November", "major": True,
      # (source km start, source km end, deck peak metres)
      "bridges": [(0.35, 2.65, 69), (21.55, 22.45, 16), (23.85, 25.62, 40)],
@@ -55,9 +55,9 @@ COURSES = [
      "stations_override": [{"km": m * MI, "fluid": True, "fuel": False, "label": "Water + Gatorade"}
                            for m in range(3, 27)]
                           + [{"km": 18 * MI + 0.05, "fluid": False, "fuel": True, "label": "Energy gels"}]},
-    {"id": "tokyo", "country": "JP", "file": "tokyo_marathon_geo.json", "name": "Tokyo Marathon",
+    {"id": "tokyo", "landmarks": ['Tokyo Metropolitan Government Building', 'Kaminarimon', 'Ryogoku Kokugikan', 'Tomioka Hachimangu', 'Nihonbashi Bridge', 'Ginza Wako', 'Zojoji Temple', 'Tokyo Station'], "country": "JP", "file": "tokyo_marathon_geo.json", "name": "Tokyo Marathon",
      "city": "Tokyo, Japan", "month": "March", "major": True},
-    {"id": "sydney", "country": "AU", "file": "sydney_marathon.json", "name": "Sydney Marathon",
+    {"id": "sydney", "landmarks": ['Sydney Harbour Bridge', 'Sydney Town Hall', 'Centennial Park', 'Hyde Park Sydney', 'Art Gallery of New South Wales', "Mrs Macquarie's Chair", 'Sydney Opera House'], "country": "AU", "file": "sydney_marathon.json", "name": "Sydney Marathon",
      "city": "North Sydney → Opera House, Australia", "month": "August", "major": True},
     # Other big-city marathons
     {"id": "amsterdam", "country": "NL", "file": "amsterdam_marathon.json", "name": "Amsterdam Marathon",
@@ -78,7 +78,7 @@ COURSES = [
      "city": "Singapore", "month": "December"},
     {"id": "taipei", "country": "TW", "file": "taipei_marathon.json", "name": "Taipei Marathon",
      "city": "Taipei, Taiwan", "month": "December"},
-    {"id": "kyoto", "country": "JP", "name": "Kyoto Marathon",
+    {"id": "kyoto", "landmarks": ['Togetsukyo Bridge', 'Ninna-ji', 'Ryoan-ji', 'Kamigamo Shrine', 'Kyoto Botanical Gardens', 'Kyoto City Hall', 'Heian Shrine'], "country": "JP", "name": "Kyoto Marathon",
      "file": "kyoto_marathon.gpx",
      "url": "https://www.goandrace.com/gpx/2025/02/16/gpx_20250216_id10116_race1_20250111195530.gpx",
      "city": "Nishikyogoku → Heian-jingu Shrine, Japan", "month": "February",
@@ -316,6 +316,7 @@ def build(course):
         "distanceKm": MARATHON_KM,
         "source": course.get("url") or SOURCE.replace("raw.githubusercontent.com", "github.com").replace("/main/", ""),
         "stationsEstimated": estimated,
+        "landmarks": course.get("landmarks"),
         "stations": stations,
         "points": [[round(p[0], 6), round(p[1], 6), round(e, 1)] for p, e in zip(samples, eles)],
     }

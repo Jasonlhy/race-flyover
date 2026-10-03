@@ -22,6 +22,8 @@ struct CourseData: Codable {
     var imported: Bool?
     /// ISO 3166-1 alpha-2 country code, for the flag in the HUD.
     var country: String?
+    /// Famous landmarks along the route, by name; resolved with Apple Maps at runtime.
+    var landmarks: [String]?
     var stations: [Station]
     /// `[latitude, longitude, elevation metres]`, evenly spaced along the route.
     var points: [[Double]]

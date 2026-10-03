@@ -1,14 +1,24 @@
 import AppKit
+import ImageIO
 import QuartzCore
+import UniformTypeIdentifiers
 
 // Race Flyover Preview: runs the screensaver in a normal window so you can try
 // settings without opening System Settings. Keys: Space pause, ←/→ move 1 km,
 // N next course, ⌘, Options.
 //
-// Snapshot mode renders a single PNG and exits:
-//   RaceFlyoverPreview --snapshot out.png [--course berlin] [--style neon]
-//       [--progress 0.4] [--tilt 60] [--zoom 0.4] [--camera chase|northUp|overview]
-//       [--phase intro|finish --time 3] [--size 1920x1080] [--hud full|minimal|off]
+// It can also save pictures and animations, then exit:
+//   --snapshot out.png             a still image (add the options below)
+//   --gif out.gif                  an animation (with --snapshot; --frames 60 --step 0.067 --gif-width 960)
+//   --snapshot-options out.png     the Options window (--page 0…5 picks a page)
+//   --list                         print the bundled courses
+//   --sync-test                    two views side by side (multi-screen behaviour)
+// Options for pictures and the live window:
+//   --course berlin  --style midnight|neon|daylight|blueprint|mono|satellite|satellitePlain|map|mapLight
+//   --progress 0.4  --advance 0.5 (play on for N seconds)  --phase intro|finish --time 3
+//   --tilt 60  --zoom 0.4  --camera chase|northUp|overview  --lap 15 (minutes)
+//   --hud full|minimal|off  --units km|mi  --font avenir  --text-scale 1.2  --panels glass
+//   --pin blue  --trail purple  --map3d on|off  --fps 30|60  --size 1920x1080  --thumbnail
 
 let arguments = CommandLine.arguments
 
@@ -159,6 +169,48 @@ if let output = option("--snapshot-options") {
     guard let view = RaceFlyoverView(frame: NSRect(x: 0, y: 0, width: 800, height: 450), isPreview: false),
           let sheet = view.configureSheet, let content = sheet.contentView else { exit(1) }
     content.layoutSubtreeIfNeeded()
+    if let page = option("--page").flatMap(Int.init) {
+        // Render the real window (on screen) so system controls draw, via its layers.
+        func walk(_ v: NSView) -> [NSView] { [v] + v.subviews.flatMap(walk) }
+        (walk(content).compactMap { $0 as? NSTabView }.first)?.selectTabViewItem(at: page)
+        for v in walk(content) where String(describing: type(of: v)) == "SidebarItem" {
+            if let i = walk(content).filter({ String(describing: type(of: $0)) == "SidebarItem" }).firstIndex(of: v), i == page {
+                v.mouseDown(with: NSEvent())
+            }
+        }
+        for sw in walk(content).compactMap({ $0 as? NSSwitch }) { print("switch state:", sw.state == .on ? "on" : "off") }
+        sheet.setFrameOrigin(NSPoint(x: 100, y: 100))
+        sheet.orderFrontRegardless()
+        RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+        sheet.displayIfNeeded()
+        let scale = sheet.backingScaleFactor
+        let size = content.bounds.size
+        let ctx = CGContext(data: nil, width: Int(size.width * scale), height: Int(size.height * scale), bitsPerComponent: 8,
+                            bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                            bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue)!
+        ctx.scaleBy(x: scale, y: scale)
+        ctx.setFillColor(NSColor.windowBackgroundColor.cgColor)
+        ctx.fill(CGRect(origin: .zero, size: size))
+        content.layer!.render(in: ctx)
+        try! NSBitmapImageRep(cgImage: ctx.makeImage()!).representation(using: .png, properties: [:])!
+            .write(to: URL(fileURLWithPath: output))
+        print("wrote \(output)")
+        exit(0)
+    }
+    if arguments.contains("--dump-pages") {
+        func walk(_ v: NSView) -> [NSView] { [v] + v.subviews.flatMap(walk) }
+        let tabs = walk(content).compactMap { $0 as? NSTabView }.first!
+        for i in 0..<tabs.numberOfTabViewItems {
+            tabs.selectTabViewItem(at: i)
+            content.layoutSubtreeIfNeeded()
+            let views = walk(tabs.selectedTabViewItem!.view!).filter { $0 is NSControl && !($0 is NSScroller) }
+            let frames = views.map { $0.convert($0.bounds, to: content) }
+            let lowest = frames.map(\.minY).min() ?? 0
+            let overflow = frames.filter { $0.minY < 50 || $0.maxX > content.bounds.width }.count
+            let title = (views.first as? NSTextField)?.stringValue ?? "?"
+            print("page \(i + 1) \(title): \(views.count) controls, lowest y=\(Int(lowest)), outside/under footer=\(overflow)")
+        }
+    }
     if arguments.contains("--dump") {
         func walk(_ v: NSView, _ depth: Int) {
             let f = v.convert(v.bounds, to: content)
@@ -192,6 +244,10 @@ if let output = option("--snapshot") {
     case "finish": engine.show(phase: .finish, at: option("--time").flatMap(Double.init) ?? 2)
     default:
         engine.seek(fraction: option("--progress").flatMap(Double.init) ?? 0.3)
+        // Play forward a little (e.g. to catch a pulse as a station is passed).
+        if let seconds = option("--advance").flatMap(Double.init) {
+            for _ in 0..<Int(seconds * 30) { engine.step(1.0 / 30) }
+        }
         // Give the neighbourhood lookup a moment, as it would have during playback.
         let deadline = Date().addingTimeInterval(4)
         while Date() < deadline {
@@ -210,6 +266,32 @@ if let output = option("--snapshot") {
     let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless],
                           backing: .buffered, defer: false)
     window.contentView = view
+    if let gifPath = option("--gif") {
+        // Animated demo: render a run of frames and write them as a looping GIF.
+        let frames = option("--frames").flatMap(Int.init) ?? 60
+        let step = option("--step").flatMap(Double.init) ?? (1.0 / 15)
+        let width = option("--gif-width").flatMap(Double.init) ?? 960
+        let height = (width * Double(size.height / size.width)).rounded()
+        guard let dest = CGImageDestinationCreateWithURL(URL(fileURLWithPath: gifPath) as CFURL,
+                                                         UTType.gif.identifier as CFString, frames, nil) else { exit(1) }
+        CGImageDestinationSetProperties(dest, [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFLoopCount: 0]] as CFDictionary)
+        for _ in 0..<frames {
+            engine.step(step)
+            view.renderFrame()
+            view.layoutSubtreeIfNeeded()
+            let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds)!
+            view.cacheDisplay(in: view.bounds, to: rep)
+            let ctx = CGContext(data: nil, width: Int(width), height: Int(height), bitsPerComponent: 8, bytesPerRow: 0,
+                                space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue)!
+            ctx.interpolationQuality = .high
+            ctx.draw(rep.cgImage!, in: CGRect(x: 0, y: 0, width: width, height: height))
+            CGImageDestinationAddImage(dest, ctx.makeImage()!, [kCGImagePropertyGIFDictionary:
+                [kCGImagePropertyGIFDelayTime: step, kCGImagePropertyGIFUnclampedDelayTime: step]] as CFDictionary)
+        }
+        CGImageDestinationFinalize(dest)
+        print("wrote \(gifPath) (\(frames) frames)")
+        exit(0)
+    }
     view.renderFrame()
     view.layoutSubtreeIfNeeded()
     guard let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { exit(1) }
