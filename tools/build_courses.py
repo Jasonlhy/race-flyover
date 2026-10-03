@@ -26,7 +26,9 @@ import math
 import os
 import re
 import sys
+import urllib.parse
 import urllib.request
+import time
 
 SOURCE = "https://raw.githubusercontent.com/distanzrunning/gpx/main/"
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -297,6 +299,46 @@ def stations_for(course, waypoints, pts, total_m):
     return merged, estimated
 
 
+DENSITY_EVERY = 12          # samples (x RESAMPLE_M) between building counts, ~300 m
+DENSITY_RADIUS = 150        # metres around each sample
+DENSITY_FULL = 180          # buildings within the radius that count as "fully built-up"
+
+
+def building_density(course, samples):
+    """How built-up the route is (0 = open, 1 = dense), every ~300 m.
+
+    Counts OpenStreetMap buildings within DENSITY_RADIUS of points along the
+    route in a single Overpass request, cached in build/src. Used by the
+    screensaver's automatic tilt (steeper among buildings, lower in open areas).
+    """
+    cache = os.path.join(CACHE, f"{course['id']}_density.json")
+    pts = samples[::DENSITY_EVERY]
+    if os.path.exists(cache):
+        counts = json.load(open(cache))
+    else:
+        body = "".join(f'way["building"](around:{DENSITY_RADIUS},{p[0]:.5f},{p[1]:.5f});out count;' for p in pts)
+        data = urllib.parse.urlencode({"data": "[out:json][timeout:300];" + body}).encode()
+        req = urllib.request.Request("https://overpass-api.de/api/interpreter", data=data,
+                                     headers={"User-Agent": "RaceFlyover-course-builder/1.0"})
+        for attempt in range(3):
+            try:
+                with urllib.request.urlopen(req, timeout=330) as r:
+                    result = json.load(r)
+                break
+            except Exception as e:  # noqa: BLE001
+                if attempt == 2:
+                    print(f"    building counts unavailable ({e}); automatic tilt disabled for this course")
+                    return None
+                time.sleep(10)
+        counts = [int(e["tags"]["ways"]) for e in result["elements"] if e.get("type") == "count"]
+        with open(cache, "w") as f:
+            json.dump(counts, f)
+        time.sleep(3)
+    dens = [min(1.0, c / DENSITY_FULL) for c in counts]
+    dens = smooth(dens, 2)
+    return [round(d, 2) for d in dens]
+
+
 def build(course):
     pts, waypoints = load(course)
     samples, total = resample(pts, RESAMPLE_M)
@@ -306,6 +348,7 @@ def build(course):
     apply_bridges(eles, course.get("bridges", []))
     eles = smooth(eles, 3)
     stations, estimated = stations_for(course, waypoints, pts, cumulative(pts)[-1])
+    density = building_density(course, samples)
     out = {
         "id": course["id"],
         "name": course["name"],
@@ -317,6 +360,8 @@ def build(course):
         "source": course.get("url") or SOURCE.replace("raw.githubusercontent.com", "github.com").replace("/main/", ""),
         "stationsEstimated": estimated,
         "landmarks": course.get("landmarks"),
+        "density": density,
+        "densityStepKm": round(DENSITY_EVERY * RESAMPLE_M / total * MARATHON_KM, 4) if density else None,
         "stations": stations,
         "points": [[round(p[0], 6), round(p[1], 6), round(e, 1)] for p, e in zip(samples, eles)],
     }

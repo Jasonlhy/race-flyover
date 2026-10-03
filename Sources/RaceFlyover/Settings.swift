@@ -58,6 +58,38 @@ enum DisplayMode: String, CaseIterable {
     }
 }
 
+enum PinSize: String, CaseIterable {
+    case small, medium, large, extraLarge
+
+    var title: String {
+        switch self {
+        case .small: return "S"
+        case .medium: return "M"
+        case .large: return "L"
+        case .extraLarge: return "XL"
+        }
+    }
+
+    /// Relative to the original pin size.
+    var scale: CGFloat {
+        switch self {
+        case .small: return 1
+        case .medium: return 1.5
+        case .large: return 2
+        case .extraLarge: return 3
+        }
+    }
+}
+
+enum PinStyle: String, CaseIterable {
+    case glass, solid
+
+    var title: String { self == .glass ? "Liquid Glass" : "Solid" }
+
+    /// Liquid Glass needs macOS 26; older systems draw the solid pin.
+    var usesGlass: Bool { self == .glass && PanelStyle.glassAvailable }
+}
+
 /// Pin and trail colours. `auto` follows the visual style.
 enum AccentColor: String, CaseIterable {
     case auto, red, orange, yellow, green, teal, blue, purple, pink, white
@@ -145,6 +177,7 @@ struct Config: Equatable {
     var lapMinutes = 15.0             // time to fly the whole course
     var camera = CameraMode.chase
     var tiltDegrees = 66.0            // 0 = straight down
+    var autoTilt = true               // steeper among buildings, lower in open areas
     var zoom = 0.42                   // 0 = street level, 1 = whole city
     var style = VisualStyle.midnight
     var exaggeration = 4.0            // elevation multiplier for stylized styles
@@ -161,6 +194,8 @@ struct Config: Equatable {
     var map3D = true                  // realistic 3D terrain and buildings in Apple Maps styles
     var showBursts = true             // ring pulse when passing stations and markers
     var showLandmarks = true
+    var pinSize = PinSize.large
+    var pinStyle = PinStyle.glass
     var pinColor = AccentColor.auto
     var trailColor = AccentColor.auto
 
@@ -187,6 +222,7 @@ final class Settings {
             if d.object(forKey: "lapMinutes") != nil { c.lapMinutes = d.double(forKey: "lapMinutes") }
             if let v = d.string(forKey: "camera").flatMap(CameraMode.init) { c.camera = v }
             if d.object(forKey: "tilt") != nil { c.tiltDegrees = d.double(forKey: "tilt") }
+            if d.object(forKey: "autoTilt") != nil { c.autoTilt = d.bool(forKey: "autoTilt") }
             if d.object(forKey: "zoom") != nil { c.zoom = d.double(forKey: "zoom") }
             if let v = d.string(forKey: "style").flatMap(VisualStyle.init) { c.style = v }
             if d.object(forKey: "exaggeration") != nil { c.exaggeration = d.double(forKey: "exaggeration") }
@@ -203,6 +239,8 @@ final class Settings {
             if d.object(forKey: "showBursts") != nil { c.showBursts = d.bool(forKey: "showBursts") }
             if d.object(forKey: "showLandmarks") != nil { c.showLandmarks = d.bool(forKey: "showLandmarks") }
             if let v = d.string(forKey: "pinColor").flatMap(AccentColor.init) { c.pinColor = v }
+            if let v = d.string(forKey: "pinSize").flatMap(PinSize.init) { c.pinSize = v }
+            if let v = d.string(forKey: "pinStyle").flatMap(PinStyle.init) { c.pinStyle = v }
             if let v = d.string(forKey: "trailColor").flatMap(AccentColor.init) { c.trailColor = v }
             if d.object(forKey: "textScale") != nil { c.textScale = min(max(d.double(forKey: "textScale"), 0.6), 1.6) }
             return c
@@ -213,6 +251,7 @@ final class Settings {
             d.set(newValue.lapMinutes, forKey: "lapMinutes")
             d.set(newValue.camera.rawValue, forKey: "camera")
             d.set(newValue.tiltDegrees, forKey: "tilt")
+            d.set(newValue.autoTilt, forKey: "autoTilt")
             d.set(newValue.zoom, forKey: "zoom")
             d.set(newValue.style.rawValue, forKey: "style")
             d.set(newValue.exaggeration, forKey: "exaggeration")
@@ -229,6 +268,8 @@ final class Settings {
             d.set(newValue.showBursts, forKey: "showBursts")
             d.set(newValue.showLandmarks, forKey: "showLandmarks")
             d.set(newValue.pinColor.rawValue, forKey: "pinColor")
+            d.set(newValue.pinSize.rawValue, forKey: "pinSize")
+            d.set(newValue.pinStyle.rawValue, forKey: "pinStyle")
             d.set(newValue.trailColor.rawValue, forKey: "trailColor")
             d.set(newValue.textScale, forKey: "textScale")
             d.synchronize()

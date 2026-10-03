@@ -23,6 +23,8 @@ public final class RaceFlyoverView: ScreenSaverView {
     private var tileGround: TileGroundView?
     private let stylized = StylizedView()
     private let glassLayer = GlassPanelsView()
+    /// Liquid Glass pin, above the scene and below the overlay panels.
+    private var pinGlass: PinGlassView?
     private let hud = HUDOverlayView()
     private let areaNamer = AreaNamer()
     private let stats = FrameStats()
@@ -196,6 +198,16 @@ public final class RaceFlyoverView: ScreenSaverView {
         stylized.tileMode = wantsTiles
         stylized.attribution = tileGround?.attribution
         stylized.isThumbnail = isPreview
+        let wantsGlassPin = config.pinStyle.usesGlass && !isPreview
+        if wantsGlassPin, pinGlass == nil {
+            let v = PinGlassView(frame: .zero)
+            addSubview(v, positioned: .below, relativeTo: glassLayer)
+            pinGlass = v
+        } else if !wantsGlassPin {
+            pinGlass?.removeFromSuperview()
+            pinGlass = nil
+        }
+        stylized.glassPin = wantsGlassPin
         hud.engine = engine
         hud.area = isPreview ? nil : areaNamer
         hud.theme = theme
@@ -342,10 +354,28 @@ public final class RaceFlyoverView: ScreenSaverView {
         if let liveMap { stats.measure("mapCamera") { liveMap.render() } }
         tileGround?.update(camera: engine.camera, course: engine.course)
         if liveMap == nil { stylized.needsDisplay = true }
+        placeGlassPin()
         hud.refresh()
         // Glass follows the panel positions from the HUD's previous draw (one
         // frame behind, which is invisible at these speeds).
         glassLayer.update(hud.usesGlass ? hud.glassPanels : [])
+    }
+
+    private func placeGlassPin() {
+        guard let pinGlass else { return }
+        var placement: (CGPoint, CGFloat, CGFloat)?
+        if let liveMap, let p = liveMap.pinPlacement {
+            placement = (liveMap.convert(p.point, to: self), p.angle, p.radius)
+        } else if liveMap == nil, let p = stylized.pinPlacement() {
+            placement = (stylized.convert(p.point, to: self), p.angle, p.radius)
+        }
+        guard let (point, angle, radius) = placement, engine?.phase != .fadeOut else {
+            pinGlass.isHidden = true
+            return
+        }
+        pinGlass.isHidden = false
+        // This view is unflipped; the bead lays itself out in its own flipped space.
+        pinGlass.place(center: point, radius: radius, angle: angle, color: stylized.theme.runner)
     }
 
     public override func draw(_ rect: NSRect) {

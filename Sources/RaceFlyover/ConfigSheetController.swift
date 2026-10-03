@@ -36,10 +36,13 @@ final class ConfigSheetController: NSObject {
     private let markersCheck = NSSwitch()
     private let burstsCheck = NSSwitch()
     private let landmarksCheck = NSSwitch()
+    private let autoTiltCheck = NSSwitch()
     private let frameRatePopup = NSPopUpButton()
     private let displaysPopup = NSPopUpButton()
     private let map3DCheck = NSSwitch()
     private let pinPopup = NSPopUpButton()
+    private let pinStylePopup = NSPopUpButton()
+    private let pinSizeControl = NSSegmentedControl()
     private let trailPopup = NSPopUpButton()
     private let infoLabel = NSTextField(wrappingLabelWithString: "")
 
@@ -97,6 +100,7 @@ final class ConfigSheetController: NSObject {
                 section(nil, rows: [
                     row("Camera", control: cameraControl),
                     row("Tilt", detail: tiltLabel, control: tiltSlider),
+                    row("Automatic tilt", subtitle: "Steeper among buildings, lower in open areas", control: autoTiltCheck),
                     row("Zoom", detail: zoomLabel, control: zoomSlider),
                 ], footer: note("Chase follows the runner and turns with the road. North up never rotates. Overview shows the whole course with a slow orbit.")),
             ]),
@@ -107,9 +111,11 @@ final class ConfigSheetController: NSObject {
                     row("Hill exaggeration", detail: exaggerationLabel, control: exaggerationSlider),
                 ], footer: note("Apple Maps styles show real imagery and street names, and need the internet the first time. The other styles work offline.")),
                 section("Runner", rows: [
+                    row("Pin style", subtitle: PanelStyle.glassAvailable ? nil : "Liquid Glass needs macOS 26", control: pinStylePopup),
+                    row("Pin size", control: pinSizeControl),
                     row("Pin colour", control: pinPopup),
                     row("Trail colour", control: trailPopup),
-                ], footer: note("On Apple Maps the trail colour is used for the route's border.")),
+                ], footer: note("The pin shows an arrow for the direction of travel. On Apple Maps the trail colour is used for the route's border.")),
             ]),
             Page(title: "Overlay", symbol: "rectangle.3.group.fill", tint: .systemIndigo, sections: [
                 section(nil, rows: [
@@ -333,7 +339,7 @@ final class ConfigSheetController: NSObject {
     }
 
     private func configureControls() {
-        for control in [stylePopup, hudPopup, fontPopup, panelPopup, frameRatePopup, displaysPopup,
+        for control in [pinStylePopup, pinSizeControl, stylePopup, hudPopup, fontPopup, panelPopup, frameRatePopup, displaysPopup,
                         pinPopup, trailPopup] as [NSControl] {
             control.target = self
             control.action = #selector(changed)
@@ -344,7 +350,7 @@ final class ConfigSheetController: NSObject {
             slider.isContinuous = true
             slider.widthAnchor.constraint(equalToConstant: 220).isActive = true
         }
-        for toggle in [fluidCheck, fuelCheck, markersCheck, map3DCheck, burstsCheck, landmarksCheck] {
+        for toggle in [fluidCheck, fuelCheck, markersCheck, map3DCheck, burstsCheck, landmarksCheck, autoTiltCheck] {
             toggle.target = self
             toggle.action = #selector(changed)
             toggle.controlSize = .small
@@ -352,6 +358,16 @@ final class ConfigSheetController: NSObject {
         importButton.target = self
         importButton.action = #selector(importGPX)
 
+        pinStylePopup.removeAllItems()
+        pinStylePopup.autoenablesItems = false
+        for style in PinStyle.allCases {
+            pinStylePopup.addItem(withTitle: style.title)
+            pinStylePopup.lastItem?.representedObject = style.rawValue
+            pinStylePopup.lastItem?.isEnabled = style == .solid || PanelStyle.glassAvailable
+        }
+        pinSizeControl.segmentCount = PinSize.allCases.count
+        for (i, size) in PinSize.allCases.enumerated() { pinSizeControl.setLabel(size.title, forSegment: i) }
+        pinSizeControl.trackingMode = .selectOne
         frameRatePopup.removeAllItems()
         frameRatePopup.addItems(withTitles: ["30 fps", "60 fps"])
         displaysPopup.removeAllItems()
@@ -525,7 +541,10 @@ final class ConfigSheetController: NSObject {
         map3DCheck.state = config.map3D ? .on : .off
         burstsCheck.state = config.showBursts ? .on : .off
         landmarksCheck.state = config.showLandmarks ? .on : .off
+        autoTiltCheck.state = config.autoTilt ? .on : .off
         pinPopup.selectItem(at: AccentColor.allCases.firstIndex(of: config.pinColor) ?? 0)
+        pinStylePopup.selectItem(at: PinStyle.allCases.firstIndex(of: config.pinStyle) ?? 0)
+        pinSizeControl.selectedSegment = PinSize.allCases.firstIndex(of: config.pinSize) ?? 2
         trailPopup.selectItem(at: AccentColor.allCases.firstIndex(of: config.trailColor) ?? 0)
         updateLabels()
     }
@@ -545,6 +564,7 @@ final class ConfigSheetController: NSObject {
         exaggerationLabel.stringValue = String(format: "%.0f× vertical (stylized visuals only)", config.exaggeration)
         exaggerationSlider.isEnabled = !config.style.usesTiles
         zoomSlider.isEnabled = config.camera != .overview
+        autoTiltCheck.isEnabled = config.camera != .overview
         map3DCheck.isEnabled = config.style.usesTiles
 
         let ids = checkedIDs
@@ -603,7 +623,10 @@ final class ConfigSheetController: NSObject {
         config.map3D = map3DCheck.state == .on
         config.showBursts = burstsCheck.state == .on
         config.showLandmarks = landmarksCheck.state == .on
+        config.autoTilt = autoTiltCheck.state == .on
         config.pinColor = AccentColor(rawValue: pinPopup.selectedItem?.representedObject as? String ?? "") ?? .auto
+        config.pinStyle = PinStyle(rawValue: pinStylePopup.selectedItem?.representedObject as? String ?? "") ?? .glass
+        config.pinSize = PinSize.allCases[max(0, pinSizeControl.selectedSegment)]
         config.trailColor = AccentColor(rawValue: trailPopup.selectedItem?.representedObject as? String ?? "") ?? .auto
         updateLabels()
         settings.config = config

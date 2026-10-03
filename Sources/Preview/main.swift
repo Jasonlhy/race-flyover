@@ -42,6 +42,8 @@ func applyOverrides(_ view: RaceFlyoverView) {
         if let v = option("--panels").flatMap(PanelStyle.init) { c.panels = v }
         if let v = option("--pin").flatMap(AccentColor.init) { c.pinColor = v }
         if let v = option("--map3d") { c.map3D = v != "off" }
+        if let v = option("--pin-size").flatMap(PinSize.init) { c.pinSize = v }
+        if let v = option("--pin-style").flatMap(PinStyle.init) { c.pinStyle = v }
         if let v = option("--fps").flatMap(Int.init) { c.smooth60 = v >= 60 }
         if let v = option("--trail").flatMap(AccentColor.init) { c.trailColor = v }
         if let v = option("--text-scale").flatMap(Double.init) { c.textScale = v }
@@ -290,6 +292,22 @@ if let output = option("--snapshot") {
         }
         CGImageDestinationFinalize(dest)
         print("wrote \(gifPath) (\(frames) frames)")
+        exit(0)
+    }
+    if arguments.contains("--onscreen") {
+        // Show the window and render its layers, so system-drawn effects appear where possible.
+        window.setFrameOrigin(NSPoint(x: 40, y: 40))
+        window.orderFrontRegardless()
+        for _ in 0..<20 { view.renderFrame(); RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
+        let scale = window.backingScaleFactor
+        let ctx = CGContext(data: nil, width: Int(size.width * scale), height: Int(size.height * scale), bitsPerComponent: 8,
+                            bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                            bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue)!
+        ctx.scaleBy(x: scale, y: scale)
+        view.layer!.render(in: ctx)
+        try! NSBitmapImageRep(cgImage: ctx.makeImage()!).representation(using: .png, properties: [:])!
+            .write(to: URL(fileURLWithPath: output))
+        print("wrote \(output) (on screen)")
         exit(0)
     }
     view.renderFrame()

@@ -44,6 +44,8 @@ final class FlyoverEngine {
     var config: Config
     var aspect = 16.0 / 9.0
     private var heading = 0.0
+    /// Smoothed building density at the runner (0 open … 1 dense), for automatic tilt.
+    private var builtUp = 0.0
 
     var course: Course { playlist[index] }
 
@@ -76,6 +78,7 @@ final class FlyoverEngine {
         phase = .intro
         phaseTime = 0
         heading = config.camera == .northUp ? 0 : course.heading(at: 0, behind: 0, ahead: 600)
+        builtUp = course.density(atKm: 0) ?? 0
         updateCamera()
     }
 
@@ -84,6 +87,7 @@ final class FlyoverEngine {
         distance = min(max(fraction, 0), 1) * course.length
         phase = .running
         phaseTime = 0
+        builtUp = course.density(atKm: course.officialKm(at: distance)) ?? 0
         heading = config.camera == .northUp ? 0 : course.heading(at: distance)
         updateCamera()
     }
@@ -98,6 +102,7 @@ final class FlyoverEngine {
         time = other.time
         distance = other.distance
         heading = other.heading
+        builtUp = other.builtUp
         updateCamera()
     }
 
@@ -145,6 +150,11 @@ final class FlyoverEngine {
             if phaseTime >= Self.fadeDuration { nextCourse(); return }
         }
         bursts.removeAll { time - $0.start > Self.burstDuration }
+        // Ease towards the local building density over a few seconds so the
+        // camera glides rather than jumps between streets and open space.
+        if let d = course.density(atKm: course.officialKm(at: distance)) {
+            builtUp += (d - builtUp) * (1 - exp(-dt / 3.0))
+        }
         updateHeading(dt: dt, moved: moved)
         updateCamera()
     }
@@ -182,8 +192,16 @@ final class FlyoverEngine {
 
     private func chaseCamera() -> CameraState {
         let s = course.sample(at: distance)
+        var tilt = config.tiltDegrees
+        var distance = config.cameraDistance
+        if config.autoTilt && course.data.density != nil {
+            // Among dense buildings: look down more steeply and sit a little higher so
+            // the route isn't hidden. In open areas: the chosen tilt, a lower flyover.
+            tilt = max(min(tilt, 20), tilt - 30 * builtUp)
+            distance *= 1 + 0.35 * builtUp
+        }
         return CameraState(target: SIMD3(s.x, s.y, s.ele), coordinate: s.coordinate, heading: heading,
-                           tilt: config.tiltDegrees * .pi / 180, distance: config.cameraDistance)
+                           tilt: tilt * .pi / 180, distance: distance)
     }
 
     private func overviewCamera(rotating: Bool) -> CameraState {

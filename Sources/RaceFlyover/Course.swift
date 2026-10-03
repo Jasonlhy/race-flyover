@@ -24,6 +24,9 @@ struct CourseData: Codable {
     var country: String?
     /// Famous landmarks along the route, by name; resolved with Apple Maps at runtime.
     var landmarks: [String]?
+    /// How built-up the route is (0 open … 1 dense) every `densityStepKm`, for automatic tilt.
+    var density: [Double]?
+    var densityStepKm: Double?
     var stations: [Station]
     /// `[latitude, longitude, elevation metres]`, evenly spaced along the route.
     var points: [[Double]]
@@ -120,6 +123,15 @@ final class Course {
 
     func coordinate(x: Double, y: Double) -> (lat: Double, lon: Double) {
         (lat0 + y / Course.metresPerDegree, lon0 + x / (cos(lat0 * .pi / 180) * Course.metresPerDegree))
+    }
+
+    /// How built-up the surroundings are at official km `km` (0 open … 1 dense), if known.
+    func density(atKm km: Double) -> Double? {
+        guard let d = data.density, let step = data.densityStepKm, step > 0, !d.isEmpty else { return nil }
+        let x = max(0, km / step)
+        let i = min(Int(x), d.count - 1), j = min(i + 1, d.count - 1)
+        let t = min(1, x - Double(i))
+        return d[i] + (d[j] - d[i]) * t
     }
 
     /// Flag emoji for the course's country, if known.

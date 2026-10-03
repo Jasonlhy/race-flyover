@@ -140,7 +140,7 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         let camera = MKMapCamera(lookingAtCenter: cam.coordinate, fromDistance: cam.distance,
                                  pitch: CGFloat(cam.tilt * 180 / .pi), heading: cam.heading * 180 / .pi)
         map.setCamera(camera, animated: false)
-        placePin(at: course.sample(at: engine.distance).coordinate)
+        placePin(course: course, distance: engine.distance)
 
         healSurface()
         diagnose()
@@ -150,9 +150,17 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
     private let pinShadow = CALayer()
     private let pinBase = CALayer()
     private let pinTop = CALayer()
+    private let pinArrow = CAShapeLayer()
+    private var pinKey = ""
+
+    /// Where the pin is on screen (this view's unflipped coordinates), its heading
+    /// (radians clockwise from screen-up) and radius, for the Liquid Glass bead.
+    private(set) var pinPlacement: (point: CGPoint, angle: CGFloat, radius: CGFloat)?
+
+    private var pinRadius: CGFloat { 15 * (engine?.config.pinSize.scale ?? 2) }
 
     private func buildPin() {
-        let r: CGFloat = 15
+        let r = pinRadius
         let scale = window?.backingScaleFactor ?? 2
         func disc(_ size: CGFloat, _ draw: @escaping (CGContext, CGRect) -> Void) -> CGImage? {
             let image = Self.image(size: size, draw)
@@ -175,6 +183,19 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
             ctx.setFillColor(runner.cgColor)
             ctx.fillEllipse(in: rect.insetBy(dx: r * 0.36, dy: r * 0.36))
         }
+        // Direction arrow on the puck's face (rotated with the heading each frame).
+        let a = r * 0.5
+        let arrowPath = CGMutablePath()
+        arrowPath.move(to: CGPoint(x: 0, y: a))
+        arrowPath.addLine(to: CGPoint(x: a * 0.72, y: -a * 0.64))
+        arrowPath.addLine(to: CGPoint(x: 0, y: -a * 0.24))
+        arrowPath.addLine(to: CGPoint(x: -a * 0.72, y: -a * 0.64))
+        arrowPath.closeSubpath()
+        pinArrow.path = arrowPath
+        pinArrow.fillColor = NSColor.white.cgColor
+        pinArrow.bounds = CGRect(x: -r, y: -r, width: r * 2, height: r * 2)
+        pinArrow.actions = ["position": NSNull(), "transform": NSNull()]
+        if pinArrow.superlayer == nil { pinLayer.addSublayer(pinArrow) }
         for (layer, size) in [(pinShadow, shadowSize), (pinBase, r * 2), (pinTop, r * 2)] {
             layer.contentsScale = scale
             layer.bounds = CGRect(x: 0, y: 0, width: size, height: size)
@@ -223,13 +244,19 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         }
     }
 
-    private func placePin(at coordinate: CLLocationCoordinate2D) {
-        if pinColor != theme.runner {
+    private func placePin(course: Course, distance: Double) {
+        let config = engine?.config
+        let key = "\(theme.runner)|\(config?.pinSize.rawValue ?? "")"
+        if pinKey != key {
+            pinKey = key
             pinColor = theme.runner
             buildPin()
         }
+        let coordinate = course.sample(at: distance).coordinate
         // Same camera MapKit just received, so the pin lands exactly on the route.
         let p = map.convert(coordinate, toPointTo: self)
+        let ahead = map.convert(course.sample(at: min(course.length, distance + 30)).coordinate, toPointTo: self)
+        let screenAngle = atan2(ahead.x - p.x, ahead.y - p.y)   // unflipped: +y is up
         let onScreen = p.x.isFinite && p.y.isFinite && bounds.insetBy(dx: -60, dy: -60).contains(p)
         // Lie flat on the ground: foreshorten by the map's actual pitch (MapKit may
         // cap it), and lift the white top above the base to show its thickness.
@@ -242,7 +269,16 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         CATransaction.setDisableActions(true)
         pinLayer.isHidden = !onScreen
         if onScreen { pinLayer.position = CGPoint(x: p.x.rounded(), y: p.y.rounded()) }
+        let glass = config?.pinStyle.usesGlass ?? false
+        pinBase.isHidden = glass
+        pinTop.isHidden = glass
+        pinArrow.isHidden = glass
         for layer in [pinShadow, pinBase, pinTop] { layer.transform = flatten }
+        // The arrow lies on the puck: turn it to the heading, then flatten with the tilt.
+        let heading = engine.map { $0.course.heading(at: $0.distance) - $0.camera.heading } ?? 0
+        pinArrow.transform = CATransform3DConcat(CATransform3DMakeRotation(CGFloat(-heading), 0, 0, 1), flatten)
+        pinArrow.position = CGPoint(x: mid.x, y: mid.y + lift)
+        pinPlacement = onScreen ? (CGPoint(x: p.x, y: p.y + pinRadius * 0.9 * squash + lift), screenAngle, pinRadius) : nil
         spawnBursts(squash: squash)
         pinShadow.position = mid
         pinBase.position = mid
