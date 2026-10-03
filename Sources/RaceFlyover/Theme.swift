@@ -32,8 +32,13 @@ struct Theme {
         // The pin is filled with its colour and ringed in white, so by default it
         // takes the trail colour (white-on-white would vanish).
         t.runner = pin.color ?? t.routeDone
+        // Route still to run: a lighter, see-through version of the trail colour.
+        t.routeAhead = (t.routeDone.blended(withFraction: 0.45, of: .white) ?? t.routeDone).withAlphaComponent(0.5)
         return t
     }
+
+    /// Light styles (dark text) use light glass; the rest use dark glass.
+    var isLight: Bool { (text.usingColorSpace(.sRGB)?.brightnessComponent ?? 1) < 0.5 }
 
     /// Gold for landmark labels: distinct from fluids (blue) and fuel (orange).
     static let landmark = hex(0xFFC93C)

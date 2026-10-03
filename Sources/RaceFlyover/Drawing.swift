@@ -156,6 +156,61 @@ enum Draw {
         ctx.restoreGState()
     }
 
+    /// A glass puck lying on the road: a see-through edge (`base`, on the ground),
+    /// a clear glass face (`rim`, lifted by the puck's thickness) and a
+    /// see-through disc of the pin colour in its middle (`centre`). Light glass
+    /// for light map styles, dark glass otherwise. Draws no outline in black.
+    static func glassPuck(_ ctx: CGContext, base: CGPath, rim: CGPath, centre: CGPath, color: NSColor,
+                          light: Bool, lineScale s: CGFloat) {
+        glassEdge(ctx, base, light: light, lineScale: s)
+        glassFace(ctx, rim: rim, centre: centre, color: color, light: light, lineScale: s)
+    }
+
+    /// The glass puck's side, just showing below its face.
+    static func glassEdge(_ ctx: CGContext, _ base: CGPath, light: Bool, lineScale s: CGFloat) {
+        ctx.addPath(base)
+        ctx.setFillColor((light ? NSColor(white: 1, alpha: 0.30) : NSColor(white: 0, alpha: 0.28)).cgColor)
+        ctx.fillPath()
+        ctx.addPath(base)
+        ctx.setStrokeColor(NSColor(white: 1, alpha: light ? 0.55 : 0.28).cgColor)
+        ctx.setLineWidth(1 * s)
+        ctx.strokePath()
+    }
+
+    /// The glass puck's face: clear glass with a coloured see-through centre.
+    static func glassFace(_ ctx: CGContext, rim: CGPath, centre: CGPath, color: NSColor, light: Bool,
+                          lineScale s: CGFloat) {
+        // Barely tinted glass with a soft sheen across its upper half.
+        ctx.addPath(rim)
+        ctx.setFillColor((light ? NSColor(white: 1, alpha: 0.24) : NSColor(white: 0.05, alpha: 0.22)).cgColor)
+        ctx.fillPath()
+        let box = rim.boundingBoxOfPath
+        ctx.saveGState()
+        ctx.addPath(rim)
+        ctx.clip()
+        if let g = CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB),
+                              colors: [NSColor(white: 1, alpha: light ? 0.45 : 0.28).cgColor,
+                                       NSColor(white: 1, alpha: 0).cgColor] as CFArray,
+                              locations: [0, 1]) {
+            ctx.drawLinearGradient(g, start: CGPoint(x: box.midX, y: box.minY),
+                                   end: CGPoint(x: box.midX, y: box.midY), options: [])
+        }
+        ctx.restoreGState()
+        ctx.addPath(rim)
+        ctx.setStrokeColor(NSColor(white: 1, alpha: light ? 0.95 : 0.6).cgColor)
+        ctx.setLineWidth(1.5 * s)
+        ctx.strokePath()
+
+        // Centre: the pin colour, see-through, with a crisp rim of the same colour.
+        ctx.addPath(centre)
+        ctx.setFillColor(color.withAlphaComponent(0.55).cgColor)
+        ctx.fillPath()
+        ctx.addPath(centre)
+        ctx.setStrokeColor(color.withAlphaComponent(0.95).cgColor)
+        ctx.setLineWidth(1.5 * s)
+        ctx.strokePath()
+    }
+
     static func radialGlow(_ ctx: CGContext, center: CGPoint, radius: CGFloat, color: NSColor) {
         guard let g = CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB),
                                  colors: [color.cgColor, color.withAlphaComponent(0).cgColor] as CFArray,

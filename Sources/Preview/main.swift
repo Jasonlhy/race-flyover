@@ -339,6 +339,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.makeKeyAndOrderFront(nil)
         saver.startAnimation()
         scheduleTimer()
+        if let p = option("--progress").flatMap(Double.init) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in self?.saver.engine?.seek(fraction: p) }
+        }
         NotificationCenter.default.addObserver(forName: Settings.didChange, object: nil, queue: .main) { [weak self] _ in
             self?.scheduleTimer()
         }

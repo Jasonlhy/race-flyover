@@ -112,12 +112,12 @@ final class ConfigSheetController: NSObject {
                     row("Hill exaggeration", detail: exaggerationLabel, control: exaggerationSlider),
                 ], footer: note("Apple Maps styles show real imagery and street names, and need the internet the first time. The other styles work offline.")),
                 section("Runner", rows: [
-                    row("Pin style", subtitle: PanelStyle.glassAvailable ? nil : "Liquid Glass needs macOS 26", control: pinStylePopup),
+                    row("Pin style", subtitle: "Glass lets the map show through", control: pinStylePopup),
                     row("Pin size", control: pinSizeControl),
                     row("Pin colour", control: pinPopup),
                     row("Trail colour", control: trailPopup),
                     row("Path thickness", subtitle: "Thicker as you zoom in", control: pathWidthControl),
-                ], footer: note("The pin shows an arrow for the direction of travel. On Apple Maps the trail colour is used for the route's border.")),
+                ], footer: note("The pin's arrow points the way the road goes. The route you've covered is drawn in the trail colour; the route still to run, in a lighter see-through shade.")),
             ]),
             Page(title: "Overlay", symbol: "rectangle.3.group.fill", tint: .systemIndigo, sections: [
                 section(nil, rows: [

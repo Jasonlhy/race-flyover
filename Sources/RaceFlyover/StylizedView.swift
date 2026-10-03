@@ -94,21 +94,8 @@ final class StylizedView: NSView {
     /// transparent, keep the route flat on it, and credit the imagery.
     var tileMode = false
     var attribution: String?
-    /// When the Liquid Glass pin is on, only its shadow and pulses are drawn
-    /// here; the glass bead itself is a separate view above the scene.
+    /// Draws the pin as a see-through glass puck instead of the solid one.
     var glassPin = false
-
-    /// Where the pin is on screen (this view's coordinates), which way it's
-    /// heading (radians clockwise from screen-up) and its radius in points.
-    struct PinPlacement {
-        /// Centre of the puck's top face, in this view's coordinates.
-        var point: CGPoint
-        /// Horizontal radius on screen and vertical foreshortening.
-        var radius: CGFloat
-        var squash: CGFloat
-        /// Direction of travel relative to the camera (radians clockwise).
-        var angle: CGFloat
-    }
 
     private var cacheKey = ""
     private var points: [SIMD3<Double>] = []
@@ -144,7 +131,7 @@ final class StylizedView: NSView {
         FrameStats.shared.measure("sceneDraw") { drawScene() }
     }
 
-    /// Camera and scale for the current frame (shared by drawing and pin placement).
+    /// Camera and scale for the current frame.
     private func sceneSetup(_ engine: FlyoverEngine) -> (proj: Projector, cam: CameraState, s: CGFloat) {
         let course = engine.course
         let ex = tileMode ? 0 : engine.config.exaggeration
@@ -156,30 +143,9 @@ final class StylizedView: NSView {
         return (Projector(camera: cam, target: target, size: bounds.size), cam, s)
     }
 
-    private func runnerPoint(_ course: Course, at distance: Double) -> SIMD3<Double> {
-        let (i, t) = course.locate(distance)
-        let a = points[i], b = points[min(i + 1, points.count - 1)]
-        return a + (b - a) * t
-    }
-
     /// Pin radius in points (before perspective), from the pin-size option.
     private func pinRadius(_ s: CGFloat) -> CGFloat {
         19 * s * (engine?.config.pinSize.scale ?? 2)
-    }
-
-    func pinPlacement() -> PinPlacement? {
-        guard let engine, bounds.width > 10 else { return nil }
-        let (proj, cam, s) = sceneSetup(engine)
-        let course = engine.course
-        let p = runnerPoint(course, at: engine.distance)
-        let r = Double(pinRadius(s)) * cam.distance / proj.focal
-        // Top face of the puck, lying on the road like the solid pin.
-        let top = p + SIMD3(0, 0, r * 0.32)
-        guard let (c, _) = proj.project(top), let rim = groundCircle(proj, center: top, radius: r) else { return nil }
-        let box = rim.boundingBoxOfPath
-        guard box.width > 1 else { return nil }
-        let heading = course.heading(at: engine.distance) - cam.heading
-        return PinPlacement(point: c, radius: box.width / 2, squash: box.height / box.width, angle: CGFloat(heading))
     }
 
     private func drawScene() {
@@ -240,8 +206,8 @@ final class StylizedView: NSView {
         proj.addPolyline(to: ahead, count: aheadCount + 1) { k in
             k == 0 ? runnerPoint : self.points[min(runnerIndex + k, self.points.count - 1)]
         }
-        if tileMode { stroke(ctx, ahead, NSColor.black.withAlphaComponent(0.45), 6.5 * s * w) }
-        stroke(ctx, ahead, theme.routeAhead, (tileMode ? 3.6 : 3.2) * s * w)
+        if tileMode { stroke(ctx, ahead, NSColor.black.withAlphaComponent(0.22), 6.5 * s * w) }
+        stroke(ctx, ahead, theme.routeAhead, (tileMode ? 6 : 5.5) * s * w)
 
         // Route already covered, with a soft glow.
         let done = CGMutablePath()
@@ -564,36 +530,33 @@ final class StylizedView: NSView {
         }
         if let shadow = groundCircle(proj, center: p, radius: r * 1.18) {
             ctx.saveGState()
-            ctx.setShadow(offset: .zero, blur: 10 * s, color: NSColor.black.withAlphaComponent(0.7).cgColor)
+            // Lighter under glass, so the road still shows through it.
+            ctx.setShadow(offset: .zero, blur: 10 * s, color: NSColor.black.withAlphaComponent(glassPin ? 0.45 : 0.7).cgColor)
             ctx.addPath(shadow)
-            ctx.setFillColor(NSColor.black.withAlphaComponent(0.45).cgColor)
+            ctx.setFillColor(NSColor.black.withAlphaComponent(glassPin ? 0.16 : 0.45).cgColor)
             ctx.fillPath()
             ctx.restoreGState()
         }
-        // Liquid Glass: draw the puck's coloured base here; the glass top is its own view above.
-        if glassPin {
-            if let base = groundCircle(proj, center: p, radius: r) {
-                ctx.addPath(base)
-                ctx.setFillColor((theme.runner.blended(withFraction: 0.45, of: .black) ?? theme.runner).cgColor)
-                ctx.fillPath()
-            }
-            return
-        }
         guard let base = groundCircle(proj, center: p, radius: r),
               let rim = groundCircle(proj, center: top, radius: r),
-              let centre = groundCircle(proj, center: top, radius: r * 0.64) else { return }
-        ctx.addPath(base)
-        ctx.setFillColor(NSColor(white: 0.72, alpha: 1).cgColor)
-        ctx.fillPath()
-        ctx.addPath(rim)
-        ctx.setFillColor(NSColor.white.cgColor)
-        ctx.fillPath()
-        ctx.addPath(centre)
-        ctx.setFillColor(theme.runner.cgColor)
-        ctx.fillPath()
-        // Direction arrow lying on the puck, pointing along the road.
+              let centre = groundCircle(proj, center: top, radius: r * 0.62) else { return }
+        if glassPin {
+            Draw.glassPuck(ctx, base: base, rim: rim, centre: centre, color: theme.runner,
+                           light: theme.isLight, lineScale: max(1, s * 1.4))
+        } else {
+            ctx.addPath(base)
+            ctx.setFillColor(NSColor(white: 0.72, alpha: 1).cgColor)
+            ctx.fillPath()
+            ctx.addPath(rim)
+            ctx.setFillColor(NSColor.white.cgColor)
+            ctx.fillPath()
+            ctx.addPath(centre)
+            ctx.setFillColor(theme.runner.cgColor)
+            ctx.fillPath()
+        }
+        // Direction arrow lying on the puck, pointing exactly along the road.
         if let engine {
-            let h = engine.course.heading(at: engine.distance)
+            let h = engine.course.travelHeading(at: engine.distance)
             let f = SIMD3(sin(h), cos(h), 0.0), side = SIMD3(cos(h), -sin(h), 0.0)
             let arrow = [top + f * (r * 0.5), top - f * (r * 0.32) + side * (r * 0.36),
                          top - f * (r * 0.12), top - f * (r * 0.32) - side * (r * 0.36)]
@@ -602,9 +565,12 @@ final class StylizedView: NSView {
                 let path = CGMutablePath()
                 path.addLines(between: pts)
                 path.closeSubpath()
+                ctx.saveGState()
+                ctx.setShadow(offset: .zero, blur: 3 * s, color: NSColor.black.withAlphaComponent(0.45).cgColor)
                 ctx.addPath(path)
                 ctx.setFillColor(NSColor.white.cgColor)
                 ctx.fillPath()
+                ctx.restoreGState()
             }
         }
     }

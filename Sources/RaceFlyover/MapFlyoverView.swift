@@ -49,6 +49,12 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
     /// from the camera each frame. (A MapKit annotation is repositioned on
     /// MapKit's own schedule, so at speed it jitters against the moving map.)
     private let pinLayer = CALayer()
+    /// The covered route, in the trail colour with a white edge. MapKit draws
+    /// the whole route underneath in a lighter see-through shade; replacing a
+    /// MapKit overlay as the runner moves makes it flicker, so the covered part
+    /// is our own layer, projected onto the map each frame.
+    private let trailCasing = CAShapeLayer()
+    private let trailCore = CAShapeLayer()
     private var pinColor: NSColor?
     private var appliedStyle: String?
     private var builtKey = ""
@@ -76,6 +82,15 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         map.showsScale = false
         map.showsUserLocation = false
         addSubview(map)
+        // The covered route, drawn above the map and updated every frame.
+        for (l, z) in [(trailCasing, 5.0), (trailCore, 6.0)] {
+            l.zPosition = CGFloat(z)
+            l.fillColor = nil
+            l.lineCap = .round
+            l.lineJoin = .round
+            l.actions = ["path": NSNull(), "lineWidth": NSNull(), "strokeColor": NSNull(), "hidden": NSNull()]
+            layer?.addSublayer(l)
+        }
         pinLayer.zPosition = 10
         pinLayer.actions = ["position": NSNull(), "contents": NSNull(), "hidden": NSNull(), "bounds": NSNull()]
         layer?.addSublayer(pinLayer)
@@ -91,6 +106,8 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         guard key != appliedStyle else { return }
         appliedStyle = key
         theme = Theme.forStyle(style).with(pin: config.pinColor, trail: config.trailColor)
+        // By default the pin matches the trail it leaves (blue on Apple Maps).
+        if config.pinColor == .auto { theme.runner = config.trailColor.color ?? Theme.hex(0x0A84FF) }
         // Realistic elevation (3D terrain and buildings) is MapKit's heaviest mode.
         let elevation: MKMapConfiguration.ElevationStyle = config.map3D ? .realistic : .flat
         switch style {
@@ -141,6 +158,7 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         let camera = MKMapCamera(lookingAtCenter: cam.coordinate, fromDistance: cam.distance,
                                  pitch: CGFloat(cam.tilt * 180 / .pi), heading: cam.heading * 180 / .pi)
         map.setCamera(camera, animated: false)
+        FrameStats.shared.measure("trail") { drawTrail(course: course, distance: engine.distance) }
         placePin(course: course, distance: engine.distance)
 
         healSurface()
@@ -154,10 +172,6 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
     private let pinArrow = CAShapeLayer()
     private var pinKey = ""
 
-    /// Where the pin is on screen (this view's unflipped coordinates), its heading
-    /// (radians clockwise from screen-up) and radius, for the Liquid Glass bead.
-    private(set) var pinPlacement: (point: CGPoint, radius: CGFloat, squash: CGFloat, angle: CGFloat)?
-
     private var pinRadius: CGFloat { 15 * (engine?.config.pinSize.scale ?? 2) }
 
     private func buildPin() {
@@ -169,23 +183,36 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
             return image.cgImage(forProposedRect: &rect, context: nil, hints: [.ctm: AffineTransform(scale: scale)])
         }
         let runner = theme.runner
+        let glass = engine?.config.pinStyle.usesGlass ?? false
         let shadowSize = r * 4
         pinShadow.contents = disc(shadowSize) { ctx, rect in
             Draw.radialGlow(ctx, center: CGPoint(x: rect.midX, y: rect.midY), radius: r * 1.9,
-                            color: NSColor.black.withAlphaComponent(0.6))
+                            color: NSColor.black.withAlphaComponent(glass ? 0.32 : 0.6))
         }
-        // Base: grey under the solid white top, or a deep shade of the pin colour under glass.
-        let glassBase = engine?.config.pinStyle.usesGlass ?? false
+        // Solid: a grey base under a white top with a coloured centre. Glass: a
+        // see-through edge and face with a see-through coloured centre.
+        let light = theme.isLight
         pinBase.contents = disc(r * 2) { ctx, rect in
-            let fill = glassBase ? (runner.blended(withFraction: 0.45, of: .black) ?? runner) : NSColor(white: 0.72, alpha: 1)
-            ctx.setFillColor(fill.cgColor)
-            ctx.fillEllipse(in: rect)
+            let inner = rect.insetBy(dx: 1, dy: 1)
+            if glass {
+                Draw.glassEdge(ctx, CGPath(ellipseIn: inner, transform: nil), light: light, lineScale: 1.4)
+            } else {
+                ctx.setFillColor(NSColor(white: 0.72, alpha: 1).cgColor)
+                ctx.fillEllipse(in: rect)
+            }
         }
         pinTop.contents = disc(r * 2) { ctx, rect in
-            ctx.setFillColor(NSColor.white.cgColor)
-            ctx.fillEllipse(in: rect)
-            ctx.setFillColor(runner.cgColor)
-            ctx.fillEllipse(in: rect.insetBy(dx: r * 0.36, dy: r * 0.36))
+            if glass {
+                let inner = rect.insetBy(dx: 1, dy: 1)
+                Draw.glassFace(ctx, rim: CGPath(ellipseIn: inner, transform: nil),
+                               centre: CGPath(ellipseIn: rect.insetBy(dx: r * 0.38, dy: r * 0.38), transform: nil),
+                               color: runner, light: light, lineScale: 1.4)
+            } else {
+                ctx.setFillColor(NSColor.white.cgColor)
+                ctx.fillEllipse(in: rect)
+                ctx.setFillColor(runner.cgColor)
+                ctx.fillEllipse(in: rect.insetBy(dx: r * 0.36, dy: r * 0.36))
+            }
         }
         // Direction arrow on the puck's face (rotated with the heading each frame).
         let a = r * 0.5
@@ -197,6 +224,12 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         arrowPath.closeSubpath()
         pinArrow.path = arrowPath
         pinArrow.fillColor = NSColor.white.cgColor
+        pinArrow.shadowColor = NSColor.black.cgColor
+        pinArrow.shadowOpacity = 0.45
+        pinArrow.shadowRadius = 2
+        pinArrow.shadowOffset = .zero
+        pinArrow.shadowPath = arrowPath
+        pinArrow.zPosition = 3
         pinArrow.bounds = CGRect(x: -r, y: -r, width: r * 2, height: r * 2)
         pinArrow.actions = ["position": NSNull(), "transform": NSNull()]
         if pinArrow.superlayer == nil { pinLayer.addSublayer(pinArrow) }
@@ -250,7 +283,7 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
 
     private func placePin(course: Course, distance: Double) {
         let config = engine?.config
-        let key = "\(theme.runner)|\(config?.pinSize.rawValue ?? "")|\(config?.pinStyle.usesGlass ?? false)"
+        let key = "\(theme.runner)|\(config?.pinSize.rawValue ?? "")|\(config?.pinStyle.usesGlass ?? false)|\(theme.isLight)"
         if pinKey != key {
             pinKey = key
             pinColor = theme.runner
@@ -259,8 +292,6 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         let coordinate = course.sample(at: distance).coordinate
         // Same camera MapKit just received, so the pin lands exactly on the route.
         let p = map.convert(coordinate, toPointTo: self)
-        let ahead = map.convert(course.sample(at: min(course.length, distance + 30)).coordinate, toPointTo: self)
-        let screenAngle = atan2(ahead.x - p.x, ahead.y - p.y)   // unflipped: +y is up
         let onScreen = p.x.isFinite && p.y.isFinite && bounds.insetBy(dx: -60, dy: -60).contains(p)
         // Lie flat on the ground: foreshorten by the map's actual pitch (MapKit may
         // cap it), and lift the white top above the base to show its thickness.
@@ -273,16 +304,12 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         CATransaction.setDisableActions(true)
         pinLayer.isHidden = !onScreen
         if onScreen { pinLayer.position = CGPoint(x: p.x.rounded(), y: p.y.rounded()) }
-        let glass = config?.pinStyle.usesGlass ?? false
-        pinTop.isHidden = glass
-        pinArrow.isHidden = glass
         for layer in [pinShadow, pinBase, pinTop] { layer.transform = flatten }
-        // The arrow lies on the puck: turn it to the heading, then flatten with the tilt.
-        let heading = engine.map { $0.course.heading(at: $0.distance) - $0.camera.heading } ?? 0
+        // The arrow lies on the puck: turn it to the road's direction right here
+        // (relative to the map's actual heading), then flatten with the tilt.
+        let heading = course.travelHeading(at: distance) - map.camera.heading * .pi / 180
         pinArrow.transform = CATransform3DConcat(CATransform3DMakeRotation(CGFloat(-heading), 0, 0, 1), flatten)
         pinArrow.position = CGPoint(x: mid.x, y: mid.y + lift)
-        pinPlacement = onScreen ? (CGPoint(x: p.x, y: p.y + lift), pinRadius, squash, CGFloat(heading)) : nil
-        _ = screenAngle
         spawnBursts(squash: squash)
         pinShadow.position = mid
         pinBase.position = mid
@@ -360,11 +387,11 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         map.removeAnnotations(map.annotations)
 
         let coords = course.lat.indices.map { CLLocationCoordinate2D(latitude: course.lat[$0], longitude: course.lon[$0]) }
-        let casing = MKPolyline(coordinates: coords, count: coords.count)
-        casing.title = "casing"
         let route = MKPolyline(coordinates: coords, count: coords.count)
-        route.title = "route"
-        map.addOverlays([casing, route], level: .aboveRoads)
+        route.title = "ahead"
+        map.addOverlay(route, level: .aboveRoads)
+        trailCasing.strokeColor = NSColor.white.withAlphaComponent(0.92).cgColor
+        trailCore.strokeColor = trailTint.cgColor
 
         var annotations: [MKAnnotation] = []
         for st in course.data.stations where (st.fluid && config.showFluid) || (st.fuel && config.showFuel) {
@@ -400,14 +427,75 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         guard abs(w - routeWidth) / routeWidth > 0.08 else { return }
         routeWidth = w
         for r in renderers {
-            r.lineWidth = ((r.polyline.title == "casing") ? 11 : 4.5) * w
+            r.lineWidth = Self.aheadWidth * w
             r.setNeedsDisplay()
         }
     }
 
-    /// The route's border: the chosen trail colour, or blue by default.
-    private var trailBorder: NSColor {
-        (engine?.config.trailColor.color ?? Theme.hex(0x0A84FF)).withAlphaComponent(0.95)
+    private static let aheadWidth: CGFloat = 8
+    private static let coreWidth: CGFloat = 7.5
+    private static let casingWidth: CGFloat = 10.5
+
+    /// The trail colour (blue by default on Apple Maps).
+    private var trailTint: NSColor {
+        engine?.config.trailColor.color ?? Theme.hex(0x0A84FF)
+    }
+
+    /// The route still to run: a lighter, see-through shade of the trail colour.
+    private var aheadTint: NSColor {
+        (trailTint.blended(withFraction: 0.45, of: .white) ?? trailTint).withAlphaComponent(0.55)
+    }
+
+    /// Draws the covered route up to the pin. Ground points map to the screen
+    /// through a plane-to-screen transform fitted to four points MapKit projects
+    /// around the runner, which is exact for flat ground and far cheaper than
+    /// asking MapKit for every point.
+    private func drawTrail(course: Course, distance: Double) {
+        let (index, _) = course.locate(distance)
+        let here = course.sample(at: distance)
+        let reach = max(60, map.camera.centerCoordinateDistance * 0.2)
+        let h = map.camera.heading * .pi / 180
+        let f = (sin(h), cos(h)), side = (cos(h), -sin(h))
+        let refs = [(f.0 * reach, f.1 * reach), (-f.0 * reach * 0.5, -f.1 * reach * 0.5),
+                    (side.0 * reach, side.1 * reach), (-side.0 * reach, -side.1 * reach)]
+        let screen = refs.map { r -> CGPoint in
+            let c = course.coordinate(x: here.x + r.0, y: here.y + r.1)
+            return map.convert(CLLocationCoordinate2D(latitude: c.lat, longitude: c.lon), toPointTo: self)
+        }
+        guard screen.allSatisfy({ $0.x.isFinite && $0.y.isFinite }),
+              let H = Homography(from: refs, to: screen.map { (Double($0.x), Double($0.y)) }) else {
+            trailCore.path = nil
+            trailCasing.path = nil
+            return
+        }
+        let path = CGMutablePath()
+        var drawing = false
+        var last = CGPoint(x: CGFloat.nan, y: 0)
+        let end = map.convert(here.coordinate, toPointTo: self)
+        for i in stride(from: 0, through: index + 1, by: 1) {
+            let atEnd = i == index + 1
+            guard let p = atEnd ? end : H.apply(course.x[i] - here.x, course.y[i] - here.y) else {
+                drawing = false   // behind the camera
+                continue
+            }
+            if !drawing {
+                path.move(to: p)
+                drawing = true
+            } else if atEnd || abs(p.x - last.x) + abs(p.y - last.y) > 1.5 {
+                path.addLine(to: p)
+            } else {
+                continue
+            }
+            last = p
+        }
+        let w = routeWidth
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        trailCasing.lineWidth = Self.casingWidth * w
+        trailCore.lineWidth = Self.coreWidth * w
+        trailCasing.path = path
+        trailCore.path = path
+        CATransaction.commit()
     }
 
     // MARK: - MKMapViewDelegate
@@ -416,17 +504,10 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         let r = MKPolylineRenderer(overlay: overlay)
         r.lineCap = .round
         r.lineJoin = .round
-        // A static route (white line with a coloured border) rather than a trail
-        // that's rebuilt as the pin moves: MapKit re-tessellates replaced
-        // overlays, which flickers. The pin shows progress.
-        switch (overlay as? MKPolyline)?.title {
-        case "casing":
-            r.strokeColor = trailBorder
-            r.lineWidth = 11 * routeWidth
-        default:
-            r.strokeColor = NSColor.white.withAlphaComponent(0.95)
-            r.lineWidth = 4.5 * routeWidth
-        }
+        // The whole route, static, in the lighter shade; the covered part is
+        // drawn over it by `drawTrail`.
+        r.strokeColor = aheadTint
+        r.lineWidth = Self.aheadWidth * routeWidth
         renderers.append(r)
         return r
     }
@@ -500,5 +581,38 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
             draw(ctx, rect)
             return true
         }
+    }
+}
+
+/// Maps flat ground (metres east and north of a reference point) to the screen.
+private struct Homography {
+    private var m: [Double]   // row-major 3×3, m[8] = 1
+
+    /// Fitted to four ground points and where they appear on screen.
+    init?(from ground: [(Double, Double)], to screen: [(Double, Double)]) {
+        guard ground.count == 4, screen.count == 4 else { return nil }
+        var a = [[Double]]()
+        for ((x, y), (u, v)) in zip(ground, screen) {
+            a.append([x, y, 1, 0, 0, 0, -u * x, -u * y, u])
+            a.append([0, 0, 0, x, y, 1, -v * x, -v * y, v])
+        }
+        // Gaussian elimination with partial pivoting on the 8×9 augmented matrix.
+        for col in 0..<8 {
+            guard let pivot = (col..<8).max(by: { abs(a[$0][col]) < abs(a[$1][col]) }),
+                  abs(a[pivot][col]) > 1e-12 else { return nil }
+            a.swapAt(col, pivot)
+            for row in 0..<8 where row != col {
+                let k = a[row][col] / a[col][col]
+                if k != 0 { for c in col..<9 { a[row][c] -= k * a[col][c] } }
+            }
+        }
+        m = (0..<8).map { a[$0][8] / a[$0][$0] } + [1]
+    }
+
+    /// Screen point for a ground point, or nil if it's behind the camera.
+    func apply(_ x: Double, _ y: Double) -> CGPoint? {
+        let w = m[6] * x + m[7] * y + 1
+        guard w > 0.02 else { return nil }
+        return CGPoint(x: (m[0] * x + m[1] * y + m[2]) / w, y: (m[3] * x + m[4] * y + m[5]) / w)
     }
 }

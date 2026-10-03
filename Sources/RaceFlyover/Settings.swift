@@ -111,10 +111,9 @@ enum PathWidth: String, CaseIterable {
 enum PinStyle: String, CaseIterable {
     case glass, solid
 
-    var title: String { self == .glass ? "Liquid Glass" : "Solid" }
+    var title: String { self == .glass ? "Glass" : "Solid" }
 
-    /// Liquid Glass needs macOS 26; older systems draw the solid pin.
-    var usesGlass: Bool { self == .glass && PanelStyle.glassAvailable }
+    var usesGlass: Bool { self == .glass }
 }
 
 /// Pin and trail colours. `auto` follows the visual style.

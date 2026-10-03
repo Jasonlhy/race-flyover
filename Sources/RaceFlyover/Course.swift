@@ -173,6 +173,12 @@ final class Course {
         return atan2(b.x - a.x, b.y - a.y)
     }
 
+    /// The road's direction right at `d` (radians clockwise from north): the
+    /// segment the runner is on, so the pin's arrow turns exactly at each bend.
+    func travelHeading(at d: Double) -> Double {
+        heading(at: d, behind: 6, ahead: 6)
+    }
+
     /// Converts traced metres to official race kilometres and back. GPS traces
     /// usually run a little long, so markers are scaled to the official distance.
     func officialKm(at d: Double) -> Double { d / length * data.distanceKm }

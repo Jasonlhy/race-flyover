@@ -14,8 +14,9 @@ for a detailed street-by-street preview before race day.
 ## Screenshots
 
 ![London Marathon over Apple Maps, approaching Tower Bridge](docs/screenshots/apple-maps-london.jpg)
-*London over Apple Maps imagery, with Tower Bridge and the Tower of London coming up, the next water and gel
-stations, a minimap of the whole course, and the elevation profile along the bottom.*
+*London over Apple Maps imagery, crossing Tower Bridge with the Tower of London ahead: the covered route
+in solid blue, the route still to run in a paler shade, the glass pin, the next water and gel stations, a
+minimap of the whole course, and the elevation profile along the bottom.*
 
 | | |
 |---|---|
@@ -39,9 +40,11 @@ stations, a minimap of the whole course, and the elevation profile along the bot
 - **A minimap** of the whole course showing where you are, with the name of the neighbourhood
   you're running through.
 - **An elevation profile** so you can see the hills coming, plus the total climb.
-- **The runner's pin**: a Liquid Glass (or solid) puck lying on the road, tinted in your chosen
-  colour, with an arrow showing which way you're heading, a trail behind it, and a pulse whenever you
+- **The runner's pin**: a see-through glass (or solid) puck lying flat on the road, with a centre in
+  your chosen colour, an arrow that points exactly the way the road goes, and a pulse whenever you
   pass a station, a marker or halfway. Choose its size and colour.
+- **The route ahead and behind**: the part you've covered is drawn in your trail colour, the part
+  still to run in a lighter, see-through shade.
 - **Automatic tilt**: the camera looks down more steeply where the streets are packed with
   buildings, so they don't hide the route, and flies lower over parks, rivers and open roads.
 - **A title card** at the start of each course and a **finish card** at the end, placed low on the
@@ -58,8 +61,8 @@ settings are grouped like the rest of System Settings:
 |---|---|
 | **Courses** | Tick the races you want; they play one after another. Import your own race. Choose how long a full course takes, from a two-minute tour to a real-time four hours. |
 | **Camera** | Follow behind the runner, keep north at the top, or watch the whole course from above with a slow orbit. Adjust how steeply the camera looks down and how close it sits, or let it adjust the tilt automatically to how built-up each area is. |
-| **Appearance** | Fly over Apple Maps (satellite or street map, with optional 3D buildings), or one of five drawn looks: Midnight, Neon Grid, Daylight, Blueprint and Minimal Mono. Choose the pin's style (Liquid Glass or solid), size and colour, and the trail's colour and thickness. |
-| **Overlay** | Show all the information panels, just the essentials, or nothing. Solid panels or Apple's Liquid Glass. Kilometres or miles. Pick a typeface and text size. |
+| **Appearance** | Fly over Apple Maps (satellite or street map, with optional 3D buildings), or one of five drawn looks: Midnight, Neon Grid, Daylight, Blueprint and Minimal Mono. Choose the pin's style (glass or solid), size and colour, and the trail's colour and thickness. |
+| **Overlay** | Show all the information panels, just the essentials, or nothing. Solid panels or Apple's Liquid Glass, light or dark to match the look you picked rather than your Mac's appearance. Kilometres or miles. Pick a typeface and text size. |
 | **On the Route** | Turn water stations, fuel stations, distance markers, the passing pulse and landmarks on or off. |
 | **Performance** | Choose what happens on multiple screens and set the frame rate. |
 

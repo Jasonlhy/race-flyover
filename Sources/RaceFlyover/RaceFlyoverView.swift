@@ -24,7 +24,6 @@ public final class RaceFlyoverView: ScreenSaverView {
     private let stylized = StylizedView()
     private let glassLayer = GlassPanelsView()
     /// Liquid Glass pin, above the scene and below the overlay panels.
-    private var pinGlass: PinGlassView?
     private let hud = HUDOverlayView()
     private let areaNamer = AreaNamer()
     private let stats = FrameStats()
@@ -198,16 +197,7 @@ public final class RaceFlyoverView: ScreenSaverView {
         stylized.tileMode = wantsTiles
         stylized.attribution = tileGround?.attribution
         stylized.isThumbnail = isPreview
-        let wantsGlassPin = config.pinStyle.usesGlass && !isPreview
-        if wantsGlassPin, pinGlass == nil {
-            let v = PinGlassView(frame: .zero)
-            addSubview(v, positioned: .below, relativeTo: glassLayer)
-            pinGlass = v
-        } else if !wantsGlassPin {
-            pinGlass?.removeFromSuperview()
-            pinGlass = nil
-        }
-        stylized.glassPin = wantsGlassPin
+        stylized.glassPin = config.pinStyle.usesGlass
         hud.engine = engine
         hud.area = isPreview ? nil : areaNamer
         hud.theme = theme
@@ -215,6 +205,8 @@ public final class RaceFlyoverView: ScreenSaverView {
         hud.usesGlass = config.panels.usesGlass
         glassLayer.clear = config.panels == .clearGlass
         glassLayer.isHidden = !config.panels.usesGlass || isPreview
+        // Glass follows the chosen look (light glass on light maps), not the system's appearance.
+        glassLayer.appearance = NSAppearance(named: theme.isLight ? .aqua : .darkAqua)
     }
 
     private func tearDownLiveMap() {
@@ -354,28 +346,10 @@ public final class RaceFlyoverView: ScreenSaverView {
         if let liveMap { stats.measure("mapCamera") { liveMap.render() } }
         tileGround?.update(camera: engine.camera, course: engine.course)
         if liveMap == nil { stylized.needsDisplay = true }
-        placeGlassPin()
         hud.refresh()
         // Glass follows the panel positions from the HUD's previous draw (one
         // frame behind, which is invisible at these speeds).
         glassLayer.update(hud.usesGlass ? hud.glassPanels : [])
-    }
-
-    private func placeGlassPin() {
-        guard let pinGlass else { return }
-        var placement: (point: CGPoint, radius: CGFloat, squash: CGFloat, angle: CGFloat)?
-        if let liveMap, let p = liveMap.pinPlacement {
-            placement = (liveMap.convert(p.point, to: self), p.radius, p.squash, p.angle)
-        } else if liveMap == nil, let p = stylized.pinPlacement() {
-            placement = (stylized.convert(p.point, to: self), p.radius, p.squash, p.angle)
-        }
-        guard let placement, engine?.phase != .fadeOut else {
-            pinGlass.isHidden = true
-            return
-        }
-        pinGlass.isHidden = false
-        pinGlass.place(center: placement.point, radius: placement.radius, squash: placement.squash,
-                       angle: placement.angle, color: stylized.theme.runner)
     }
 
     public override func draw(_ rect: NSRect) {
