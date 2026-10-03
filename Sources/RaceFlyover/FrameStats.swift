@@ -6,7 +6,8 @@ import os
 /// (subsystem com.raceflyover, category perf) so slow frames can be diagnosed
 /// inside the screensaver host.
 final class FrameStats {
-    static let shared = FrameStats()
+    /// Stats for whichever view is currently drawing (each view owns its own).
+    static var shared = FrameStats()
     private static let log = Logger(subsystem: "com.raceflyover", category: "perf")
 
     private var intervals: [Double] = []

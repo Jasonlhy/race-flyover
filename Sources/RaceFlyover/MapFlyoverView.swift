@@ -38,14 +38,11 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
     weak var engine: FlyoverEngine?
     var onFailure: (() -> Void)?
 
-    private static let log = Logger(subsystem: "com.raceflyover", category: "map")
+    static let log = Logger(subsystem: "com.raceflyover", category: "map")
     private let map = MKMapView()
     private let runner = RunnerAnnotation()
     private var appliedStyle: String?
     private var builtKey = ""
-    private var doneLine: MKPolyline?
-    private var doneDistance = -1.0
-    private var doneUpdatedAt = 0.0
     private var theme = Theme.forStyle(.satellite)
     private let createdAt = CACurrentMediaTime()
     private var lastDiagnostic = 0.0
@@ -132,15 +129,6 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         map.setCamera(camera, animated: false)
         runner.coordinate = course.sample(at: engine.distance).coordinate
 
-        // Keep the trail glued to the pin: refresh it every few metres (scaled to
-        // the zoom so it's always sub-pixel-ish), at most ~12 times a second.
-        let now = CACurrentMediaTime()
-        let step = max(4, cam.distance / 300)
-        if engine.distance < doneDistance || (engine.distance - doneDistance >= step && now - doneUpdatedAt > 0.08) {
-            updateDoneLine(course, at: engine.distance)
-            doneUpdatedAt = now
-        }
-
         healSurface()
         diagnose()
     }
@@ -211,8 +199,6 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         builtKey = key
         map.removeOverlays(map.overlays)
         map.removeAnnotations(map.annotations)
-        doneLine = nil
-        doneDistance = -1
 
         let coords = course.lat.indices.map { CLLocationCoordinate2D(latitude: course.lat[$0], longitude: course.lon[$0]) }
         let casing = MKPolyline(coordinates: coords, count: coords.count)
@@ -243,22 +229,9 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         map.addAnnotation(runner)
     }
 
-    private func updateDoneLine(_ course: Course, at distance: Double) {
-        doneDistance = distance
-        let old = doneLine
-        let (i, _) = course.locate(distance)
-        if distance > 1 {
-            var coords = (0...i).map { CLLocationCoordinate2D(latitude: course.lat[$0], longitude: course.lon[$0]) }
-            coords.append(course.sample(at: distance).coordinate)
-            let line = MKPolyline(coordinates: coords, count: coords.count)
-            line.title = "done"
-            // Add the new trail before removing the old one so it never flickers.
-            map.addOverlay(line, level: .aboveRoads)
-            doneLine = line
-        } else {
-            doneLine = nil
-        }
-        if let old { map.removeOverlay(old) }
+    /// The route's border: the chosen trail colour, or blue by default.
+    private var trailBorder: NSColor {
+        (engine?.config.trailColor.color ?? Theme.hex(0x0A84FF)).withAlphaComponent(0.95)
     }
 
     // MARK: - MKMapViewDelegate
@@ -267,16 +240,16 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         let r = MKPolylineRenderer(overlay: overlay)
         r.lineCap = .round
         r.lineJoin = .round
+        // A static route (white line with a coloured border) rather than a trail
+        // that's rebuilt as the pin moves: MapKit re-tessellates replaced
+        // overlays, which flickers. The pin shows progress.
         switch (overlay as? MKPolyline)?.title {
         case "casing":
-            r.strokeColor = NSColor.black.withAlphaComponent(0.45)
-            r.lineWidth = 9
-        case "done":
-            r.strokeColor = theme.routeDone
-            r.lineWidth = 10
+            r.strokeColor = trailBorder
+            r.lineWidth = 11
         default:
-            r.strokeColor = theme.routeAhead
-            r.lineWidth = 4
+            r.strokeColor = NSColor.white.withAlphaComponent(0.95)
+            r.lineWidth = 4.5
         }
         return r
     }

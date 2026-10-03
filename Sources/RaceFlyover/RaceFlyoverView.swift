@@ -25,6 +25,9 @@ public final class RaceFlyoverView: ScreenSaverView {
     private let glassLayer = GlassPanelsView()
     private let hud = HUDOverlayView()
     private let areaNamer = AreaNamer()
+    private let stats = FrameStats()
+    /// Set when a newer view has taken over this screen; this one stays dark.
+    private var superseded = false
     private var lastTick: CFTimeInterval = 0
     /// Display-synchronised clock (falls back to the screensaver timer if the
     /// host never delivers callbacks).
@@ -224,6 +227,7 @@ public final class RaceFlyoverView: ScreenSaverView {
             tearDownLiveMap()
         } else {
             Self.reapOrphans()
+            if isAnimating { claimScreen() }
             installContent()
             if isAnimating { startLink() }
         }
@@ -267,6 +271,7 @@ public final class RaceFlyoverView: ScreenSaverView {
     public override func startAnimation() {
         super.startAnimation()
         lastTick = 0
+        claimScreen()
         startLink()
         // Settings may have changed in another process (System Settings) since
         // this instance was created.
@@ -283,6 +288,29 @@ public final class RaceFlyoverView: ScreenSaverView {
         link = nil
     }
 
+    /// The host can keep an older view attached to a hidden window and still
+    /// animating, which doubles the map rendering. The newest view on a screen
+    /// wins; older ones on the same screen stop and release their maps.
+    private func claimScreen() {
+        guard !isPreview, let window else { return }
+        superseded = false
+        for other in Self.instances.allObjects where other !== self && !other.isPreview && other.serial < serial {
+            if other.window == nil || other.window?.screen == window.screen {
+                other.retire()
+            }
+        }
+    }
+
+    private func retire() {
+        guard !superseded else { return }
+        superseded = true
+        stopAnimationIfNeeded()
+        tearDownLiveMap()
+        tileGround?.removeFromSuperview()
+        tileGround = nil
+        MapFlyoverView.log.notice("view #\(self.serial, privacy: .public) retired: a newer view took over its screen")
+    }
+
     public override func animateOneFrame() {
         // The display link drives frames when it's running; this timer is the fallback.
         if CACurrentMediaTime() - lastLinkTick < 0.5 { return }
@@ -292,15 +320,16 @@ public final class RaceFlyoverView: ScreenSaverView {
     private func advance(to time: CFTimeInterval) {
         let dt = lastTick == 0 ? 0 : max(0, time - lastTick)
         lastTick = time
-        guard window != nil, !isIdleScreen else { return }
-        if dt > 0 { FrameStats.shared.frame(interval: dt) }
+        guard window != nil, !isIdleScreen, !superseded else { return }
+        FrameStats.shared = stats
+        if dt > 0 { stats.frame(interval: dt) }
         if let leader = leader, let lead = leader.engine, let engine {
             engine.mirror(lead)
         } else if !paused {
             engine?.step(min(0.25, dt))
         }
-        FrameStats.shared.measure("renderFrame") { renderFrame() }
-        FrameStats.shared.reportIfDue(label: "\(config.style.rawValue) \(Int(bounds.width))x\(Int(bounds.height))")
+        stats.measure("renderFrame") { renderFrame() }
+        stats.reportIfDue(label: "view#\(serial) \(config.style.rawValue)\(config.map3D ? "" : "-flat") \(Int(config.smooth60 ? 60 : 30))fps-target \(Int(bounds.width))x\(Int(bounds.height))")
     }
 
     func renderFrame() {
@@ -310,7 +339,7 @@ public final class RaceFlyoverView: ScreenSaverView {
             areaNamer.update(courseID: engine.course.id, coordinate: engine.course.sample(at: engine.distance).coordinate,
                              now: CACurrentMediaTime())
         }
-        if let liveMap { FrameStats.shared.measure("mapCamera") { liveMap.render() } }
+        if let liveMap { stats.measure("mapCamera") { liveMap.render() } }
         tileGround?.update(camera: engine.camera, course: engine.course)
         if liveMap == nil { stylized.needsDisplay = true }
         hud.refresh()

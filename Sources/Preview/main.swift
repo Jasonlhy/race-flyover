@@ -125,7 +125,8 @@ func snapshotTiles(view: RaceFlyoverView, size: NSSize, output: String) {
 }
 
 if arguments.contains("--sync-test") {
-    // Two "screens" showing the same course should stay in lockstep.
+    // Two views. On separate screens they should stay in lockstep; on one screen
+    // (as here, normally) the newer view takes over and the older one retires.
     var views: [RaceFlyoverView] = []
     for i in 0..<2 {
         let w = NSWindow(contentRect: NSRect(x: 60 + i * 700, y: 60, width: 640, height: 360), styleMask: [.titled],

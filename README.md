@@ -45,7 +45,7 @@ Then open **System Settings › Screen Saver**, pick **Race Flyover**, and click
 | Overlay | Full HUD (title with country flag; distance panel with a minimap of the whole course and the current neighbourhood; next fluid/fuel; elevation profile), Minimal, or Off. Units in km or miles. |
 | Panels | **Solid**, **Liquid Glass** or **Liquid Glass (Clear)** (macOS 26+): real system glass behind the HUD panels and title cards, refracting the course moving underneath. |
 | Typeface | SF Pro, SF Pro Rounded, New York, SF Mono, Avenir Next, Helvetica Neue, Futura, Gill Sans or DIN Condensed, with overlay size S / M / L / XL. |
-| Pin & trail | Colours for the runner's pin and the trail it leaves (or match the visual style). |
+| Pin & trail | Colours for the runner's pin and its trail (or match the visual style). In Apple Maps styles the route is drawn once with a border in the trail colour (blue by default) and the pin shows progress, which avoids MapKit flicker. |
 | Show | Toggle fluid stations, fuel stations and distance markers. |
 | Displays | **Same course on every screen** (synced), **Different course on each screen**, or **Main display only** (other screens stay black; the biggest saving on multi-screen setups). |
 | Frame rate | 30 fps (recommended) or 60 fps. Frames are synced to the display refresh either way. |
@@ -104,8 +104,9 @@ station overrides.
 - Neighbourhood names come from Apple's reverse geocoding, looked up roughly every 350 m and
   cached, so a replayed course doesn't repeat lookups.
 - Map diagnostics go to the unified log: `log show --last 10m --predicate 'subsystem == "com.raceflyover"'`.
-- The host creates a new view whenever the preview restarts and doesn't always free old ones;
-  Race Flyover stops those and tears down their maps so they can't exhaust GPU resources.
+- The host creates a new view whenever the preview restarts and can keep old ones attached to
+  hidden windows, still animating. The newest view on each screen takes over; older ones on the
+  same screen stop and release their maps, so only one map renders per screen.
 - In the small System Settings thumbnail, Apple Maps styles show as Midnight.
 - **Performance.** Measured at 2560×1440 with the live Apple Maps satellite style: about 93% of
   one CPU core with 3D buildings & terrain on, about 33% with it off (30 fps); 60 fps adds roughly
