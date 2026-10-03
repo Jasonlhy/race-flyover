@@ -52,12 +52,14 @@ The title and finish cards sit at the bottom of the screen, clear of the clock m
 ## Courses
 
 Built in: **Boston, London, Berlin, Chicago, New York, Tokyo, Sydney** (the Majors)
-plus Amsterdam, Valencia, Paris, Los Angeles, Houston, Mexico City, Osaka, Singapore,
+plus Amsterdam, Valencia, Paris, Los Angeles, Houston, Mexico City, Osaka, Kyoto, Singapore,
 Taipei and Shanghai.
 
 - Geometry, elevation and aid-station waypoints come from the community collection
   [distanzrunning/gpx](https://github.com/distanzrunning/gpx). That repo doesn't state a
   licence, so treat the bundled data as personal-use only.
+- Kyoto's route comes from [GoAndRace](https://www.goandrace.com/en/map/2025/kyoto-marathon-2025-kyoto-course-map-1.php)
+  and its fluid and food stations from the official 2025 participant guide.
 - Distances are scaled to the official 42.195 km, so markers and stations line up with
   race kilometres even though GPS traces run a little long.
 - NYC's bridge climbs are restored (terrain data reads the water, not the deck), and its

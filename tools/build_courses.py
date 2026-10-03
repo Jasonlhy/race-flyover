@@ -78,6 +78,28 @@ COURSES = [
      "city": "Singapore", "month": "December"},
     {"id": "taipei", "country": "TW", "file": "taipei_marathon.json", "name": "Taipei Marathon",
      "city": "Taipei, Taiwan", "month": "December"},
+    {"id": "kyoto", "country": "JP", "name": "Kyoto Marathon",
+     "file": "kyoto_marathon.gpx",
+     "url": "https://www.goandrace.com/gpx/2025/02/16/gpx_20250216_id10116_race1_20250111195530.gpx",
+     "city": "Nishikyogoku → Heian-jingu Shrine, Japan", "month": "February",
+     # Official 2025 participant guide: 14 water stations, sports drink at
+     # alternate stations, food at stations 5–11 and 13.
+     "stations_override": [
+         {"km": km, "fluid": True, "fuel": bool(food),
+          "label": ("Water + sports drink" if sports else "Water") + (f" · {food}" if food else "")}
+         for km, sports, food in [
+             (4.5, True, ""), (7.9, False, ""), (10.6, True, ""), (12.5, False, ""),
+             (15.3, True, "Bananas, salt tablets"),
+             (17.6, False, "Rice crackers, kombu, matcha biscuits"),
+             (20.6, True, "Strawberry bread, senbei, cherry tomatoes"),
+             (23.1, False, "Salt tablets, sweets"),
+             (26.5, True, "Kyobaum cake, Ramune candy"),
+             (29.5, False, "Bananas, senbei"),
+             (32.2, True, "Strawberries, cherry tomatoes, rice crackers"),
+             (35.1, False, ""),
+             (37.2, True, "Kyobaum matcha cake"),
+             (40.8, False, ""),
+         ]]},
     {"id": "shanghai", "country": "CN", "file": "shanghai_marathon.json", "name": "Shanghai Marathon",
      "city": "Shanghai, China", "month": "November"},
 ]
@@ -98,18 +120,33 @@ def haversine(a, b):
     return 2 * r * math.asin(math.sqrt(h))
 
 
-def fetch(name):
+def fetch(name, url=None):
     os.makedirs(CACHE, exist_ok=True)
     path = os.path.join(CACHE, name)
     if not os.path.exists(path):
-        req = urllib.request.Request(SOURCE + name, headers={"User-Agent": "RaceFlyover-course-builder/1.0"})
+        req = urllib.request.Request(url or SOURCE + name, headers={"User-Agent": "Mozilla/5.0 RaceFlyover-course-builder/1.0"})
         with urllib.request.urlopen(req, timeout=60) as r, open(path, "wb") as f:
             f.write(r.read())
     with open(path) as f:
-        return json.load(f)
+        return f.read() if name.endswith(".gpx") else json.load(f)
+
+
+def load_gpx(text):
+    """Track (or route) points with elevation; waypoints are ignored."""
+    pts = []
+    for m in re.finditer(r'<(?:trkpt|rtept)\s+lat="([-\d.]+)"\s+lon="([-\d.]+)"\s*>(.*?)</(?:trkpt|rtept)>', text, re.S):
+        ele = re.search(r"<ele>([-\d.]+)</ele>", m.group(3))
+        pts.append((float(m.group(1)), float(m.group(2)), float(ele.group(1)) if ele else None))
+    dedup = [pts[0]]
+    for p in pts[1:]:
+        if haversine(p, dedup[-1]) > 0.5:
+            dedup.append(p)
+    return dedup, []
 
 
 def load(course):
+    if course["file"].endswith(".gpx"):
+        return load_gpx(fetch(course["file"], course.get("url")))
     data = fetch(course["file"])
     feats = data["features"] if "features" in data else [data]
     line, waypoints = [], []
@@ -277,7 +314,7 @@ def build(course):
         "country": course["country"],
         "major": course.get("major", False),
         "distanceKm": MARATHON_KM,
-        "source": SOURCE.replace("raw.githubusercontent.com", "github.com").replace("/main/", "") ,
+        "source": course.get("url") or SOURCE.replace("raw.githubusercontent.com", "github.com").replace("/main/", ""),
         "stationsEstimated": estimated,
         "stations": stations,
         "points": [[round(p[0], 6), round(p[1], 6), round(e, 1)] for p, e in zip(samples, eles)],
