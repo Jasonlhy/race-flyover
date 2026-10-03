@@ -5,6 +5,20 @@ Fluid and fuel stations stand along the route as pins, with distance markers, an
 elevation curtain and a live elevation profile. It works as a detailed street-level
 flyover or as a calm overview running in the background.
 
+## Screenshots
+
+![London Marathon over Apple Maps satellite imagery](docs/screenshots/apple-maps-london.jpg)
+*London Marathon over Apple Maps imagery, approaching Tower Bridge at 20K: minimap with the current neighbourhood, next fluid and fuel stations, and the elevation profile. (Rendered with the snapshot tool; the live screensaver adds Apple Maps' 3D terrain and buildings.)*
+
+| | |
+|---|---|
+| ![Boston Marathon in Midnight](docs/screenshots/midnight-boston.jpg) | ![New York City Marathon in Daylight, miles](docs/screenshots/daylight-nyc.jpg) |
+| **Midnight** · Boston, nearing Heartbreak Hill, with the elevation curtain | **Daylight** · New York in miles, with fluid stations every mile |
+| ![Tokyo Marathon in Neon Grid with Avenir Next](docs/screenshots/neon-tokyo.jpg) | ![Berlin Marathon intro card in Blueprint](docs/screenshots/intro-berlin.jpg) |
+| **Neon Grid** · Tokyo, set in Avenir Next | **Intro card** · Berlin in Blueprint, before the camera swoops in |
+| ![Chicago Marathon finish card](docs/screenshots/finish-chicago.jpg) | |
+| **Finish card** · Chicago, as the camera pulls back over the course | |
+
 ## Build & install
 
 ```bash
