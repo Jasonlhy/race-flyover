@@ -29,7 +29,11 @@ public final class RaceFlyoverView: ScreenSaverView {
     private let stats = FrameStats()
     /// Set when a newer view has taken over this screen; this one stays dark.
     private var superseded = false
-    private var lastTick: CFTimeInterval = 0
+    /// When the latest frame will be on screen.
+    private(set) var lastTick: CFTimeInterval = 0
+    /// Frame rate actually asked of the display: drops to 30 if 60 can't be kept up.
+    private var linkFPS: Float = 60
+    private var rateWindow: (start: CFTimeInterval, frames: Int) = (0, 0)
     /// Display-synchronised clock (falls back to the screensaver timer if the
     /// host never delivers callbacks).
     private var link: CADisplayLink?
@@ -237,7 +241,7 @@ public final class RaceFlyoverView: ScreenSaverView {
         }
     }
 
-    private var targetFPS: Float { config.smooth60 ? 60 : 30 }
+    private var targetFPS: Float { min(config.smooth60 ? 60 : 30, linkFPS) }
 
     private func startLink() {
         guard link == nil, window != nil else { return }
@@ -295,8 +299,11 @@ public final class RaceFlyoverView: ScreenSaverView {
     /// The host can keep an older view attached to a hidden window and still
     /// animating, which doubles the map rendering. The newest view on a screen
     /// wins; older ones on the same screen stop and release their maps.
+    /// Lets two views share a screen (the preview app's multi-screen test).
+    static var allowSharedScreen = false
+
     private func claimScreen() {
-        guard !isPreview, let window else { return }
+        guard !isPreview, !Self.allowSharedScreen, let window else { return }
         superseded = false
         for other in Self.instances.allObjects where other !== self && !other.isPreview && other.serial < serial {
             if other.window == nil || other.window?.screen == window.screen {
@@ -327,13 +334,33 @@ public final class RaceFlyoverView: ScreenSaverView {
         guard window != nil, !isIdleScreen, !superseded else { return }
         FrameStats.shared = stats
         if dt > 0 { stats.frame(interval: dt) }
+        if !paused { engine?.step(min(0.25, dt)) }
         if let leader = leader, let lead = leader.engine, let engine {
-            engine.mirror(lead)
-        } else if !paused {
-            engine?.step(min(0.25, dt))
+            engine.sync(to: lead, lag: time - leader.lastTick)
         }
         stats.measure("renderFrame") { renderFrame() }
-        stats.reportIfDue(label: "view#\(serial) \(config.style.rawValue)\(config.map3D ? "" : "-flat") \(Int(config.smooth60 ? 60 : 30))fps-target \(Int(bounds.width))x\(Int(bounds.height))")
+        adaptFrameRate(at: time)
+        let screen = window?.screen.map { ($0 == NSScreen.screens.first ? "main:" : "") + $0.localizedName } ?? "?"
+        stats.reportIfDue(label: "view#\(serial) [\(screen)\(leader == nil ? "" : ", following #\(leader!.serial)")] \(config.style.rawValue)\(config.map3D ? "" : "-flat") \(Int(targetFPS))fps-target \(Int(bounds.width))x\(Int(bounds.height))")
+    }
+
+    /// A steady 30 fps looks smoother than an uneven 40, so if 60 isn't being
+    /// kept up (two big screens of 3D map can be too much), settle at 30.
+    private func adaptFrameRate(at time: CFTimeInterval) {
+        guard config.smooth60, linkFPS > 30, link != nil else { return }
+        // Judge only the steady part of a run, not the map loading at the start.
+        guard engine?.phase == .running else { rateWindow = (0, 0); return }
+        if rateWindow.start == 0 || time - rateWindow.start > 30 { rateWindow = (time, 0); return }
+        rateWindow.frames += 1
+        let elapsed = time - rateWindow.start
+        guard elapsed >= 4 else { return }
+        let fps = Double(rateWindow.frames) / elapsed
+        rateWindow = (time, 0)
+        if fps < 50 {
+            linkFPS = 30
+            updateLinkRate()
+            MapFlyoverView.log.notice("view #\(self.serial, privacy: .public) managed \(Int(fps), privacy: .public) fps of 60; settling at a steady 30")
+        }
     }
 
     func renderFrame() {

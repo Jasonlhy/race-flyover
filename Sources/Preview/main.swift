@@ -12,7 +12,7 @@ import UniformTypeIdentifiers
 //   --gif out.gif                  an animation (with --snapshot; --frames 60 --step 0.067 --gif-width 960)
 //   --snapshot-options out.png     the Options window (--page 0…5 picks a page)
 //   --list                         print the bundled courses
-//   --sync-test                    two views side by side (multi-screen behaviour)
+//   --sync-test                    two views side by side (multi-screen behaviour; --shared keeps both running on one screen)
 // Options for pictures and the live window:
 //   --course berlin  --style midnight|neon|daylight|blueprint|mono|satellite|satellitePlain|map|mapLight
 //   --progress 0.4  --advance 0.5 (play on for N seconds; --trace prints the runner and camera)  --phase intro|finish --time 3
@@ -143,17 +143,32 @@ if arguments.contains("--sync-test") {
     // Two views. On separate screens they should stay in lockstep; on one screen
     // (as here, normally) the newer view takes over and the older one retires.
     var views: [RaceFlyoverView] = []
+    RaceFlyoverView.allowSharedScreen = arguments.contains("--shared")
     for i in 0..<2 {
         let w = NSWindow(contentRect: NSRect(x: 60 + i * 700, y: 60, width: 640, height: 360), styleMask: [.titled],
                          backing: .buffered, defer: false)
         let v = RaceFlyoverView(frame: w.contentView!.bounds, isPreview: false)!
         v.override { $0.displays = arguments.contains("--different") ? .different : .same; $0.style = .midnight; $0.selection = "all" }
+        applyOverrides(v)
         w.contentView = v
         w.orderFrontRegardless()
         v.startAnimation()
         views.append(v)
     }
-    for _ in 0..<660 { views.forEach { $0.animateOneFrame() }; RunLoop.current.run(until: Date().addingTimeInterval(1.0 / 60)) }
+    var pulses = [0, 0], seen = [Double](repeating: -1, count: 2)
+    for frame in 0..<1200 {
+        views.forEach { $0.animateOneFrame() }
+        RunLoop.current.run(until: Date().addingTimeInterval(1.0 / 60))
+        for (i, v) in views.enumerated() {
+            for b in v.engine!.bursts where b.start > seen[i] { seen[i] = b.start; pulses[i] += 1 }
+        }
+        if arguments.contains("--shared"), frame % 120 == 0, let a = views.first?.engine, let b = views.last?.engine {
+            print(String(format: "t=%.0fs  #1 %@ km=%.3f  #2 %@ km=%.3f  gap=%.1fm", Double(frame) / 60,
+                         "\(a.phase)", a.course.officialKm(at: a.distance), "\(b.phase)", b.course.officialKm(at: b.distance),
+                         abs(a.distance - b.distance)))
+        }
+    }
+    print("pulses: screen 1 \(pulses[0]), screen 2 \(pulses[1])")
     for (i, v) in views.enumerated() {
         let e = v.engine!
         print("screen \(i + 1): \(e.course.name) phase=\(e.phase) km=\(String(format: "%.3f", e.course.officialKm(at: e.distance)))")

@@ -131,7 +131,41 @@ final class FlyoverEngine {
         heading = other.heading
         builtUp = other.builtUp
         visit = other.visit
+        bursts = other.bursts
         updateCamera()
+    }
+
+    /// Keeps this engine in step with another screen's while still advancing on
+    /// its own clock (call after `step`). Copying the other engine every frame
+    /// instead made motion uneven, because the screens' frames don't line up,
+    /// and lost the pulses. `lag` is how much later this frame is shown than
+    /// the other engine's latest one, in seconds.
+    func sync(to other: FlyoverEngine, lag: Double) {
+        guard other.index == index, other.course.id == course.id, other.phase == phase else {
+            mirror(other)
+            return
+        }
+        let lag = min(max(lag, -0.1), 0.1)
+        let expectedTime = other.time + lag
+        if phase == .running {
+            let expected = min(course.length, other.distance + other.metresPerSecond * other.speedFactor * lag)
+            let error = expected - distance
+            if abs(error) > max(30, metresPerSecond * 0.5) {
+                mirror(other)
+                time = expectedTime
+                return
+            }
+            // Ease out small differences over a few frames, invisibly.
+            distance += error * 0.1
+            // Visits are decided by each engine at the same spot; follow the
+            // other screen's if they disagree, on this engine's clock.
+            if other.visit?.stop.d != visit?.stop.d {
+                visit = other.visit.map { Visit(stop: $0.stop, start: $0.start - other.time + time) }
+            }
+        } else {
+            phaseTime += (other.phaseTime + lag - phaseTime) * 0.1
+        }
+        time += (expectedTime - time) * 0.1
     }
 
     /// Moves the runner by `metres` (preview app arrow keys).
