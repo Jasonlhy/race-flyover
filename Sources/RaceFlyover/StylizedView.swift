@@ -101,9 +101,13 @@ final class StylizedView: NSView {
     /// Where the pin is on screen (this view's coordinates), which way it's
     /// heading (radians clockwise from screen-up) and its radius in points.
     struct PinPlacement {
+        /// Centre of the puck's top face, in this view's coordinates.
         var point: CGPoint
-        var angle: CGFloat
+        /// Horizontal radius on screen and vertical foreshortening.
         var radius: CGFloat
+        var squash: CGFloat
+        /// Direction of travel relative to the camera (radians clockwise).
+        var angle: CGFloat
     }
 
     private var cacheKey = ""
@@ -169,12 +173,13 @@ final class StylizedView: NSView {
         let course = engine.course
         let p = runnerPoint(course, at: engine.distance)
         let r = Double(pinRadius(s)) * cam.distance / proj.focal
-        // The bead floats a little above the road.
-        let lifted = p + SIMD3(0, 0, r * 0.9)
-        let h = course.heading(at: engine.distance)
-        guard let (c, _) = proj.project(lifted), let (ahead, _) = proj.project(lifted + SIMD3(sin(h), cos(h), 0) * r) else { return nil }
-        let angle = atan2(ahead.x - c.x, -(ahead.y - c.y))
-        return PinPlacement(point: c, angle: angle, radius: pinRadius(s))
+        // Top face of the puck, lying on the road like the solid pin.
+        let top = p + SIMD3(0, 0, r * 0.32)
+        guard let (c, _) = proj.project(top), let rim = groundCircle(proj, center: top, radius: r) else { return nil }
+        let box = rim.boundingBoxOfPath
+        guard box.width > 1 else { return nil }
+        let heading = course.heading(at: engine.distance) - cam.heading
+        return PinPlacement(point: c, radius: box.width / 2, squash: box.height / box.width, angle: CGFloat(heading))
     }
 
     private func drawScene() {
@@ -219,11 +224,14 @@ final class StylizedView: NSView {
         ctx.setLineCap(.round)
         ctx.setLineJoin(.round)
 
+        // Path thickness: grows as the camera comes closer, times the user's choice.
+        let w = PathWidth.zoomFactor(cameraDistance: D) * config.pathWidth.scale
+
         // Ground shadow of the route.
         if ex > 0.01 {
             let shadow = CGMutablePath()
             proj.addPolyline(to: shadow, count: points.count, stride: 2) { SIMD3(self.points[$0].x, self.points[$0].y, 0) }
-            stroke(ctx, shadow, theme.shadow, 3 * s)
+            stroke(ctx, shadow, theme.shadow, 3 * s * w)
         }
 
         // Route still to run.
@@ -232,8 +240,8 @@ final class StylizedView: NSView {
         proj.addPolyline(to: ahead, count: aheadCount + 1) { k in
             k == 0 ? runnerPoint : self.points[min(runnerIndex + k, self.points.count - 1)]
         }
-        if tileMode { stroke(ctx, ahead, NSColor.black.withAlphaComponent(0.45), 6 * s) }
-        stroke(ctx, ahead, theme.routeAhead, (tileMode ? 3.2 : 2.6) * s)
+        if tileMode { stroke(ctx, ahead, NSColor.black.withAlphaComponent(0.45), 6.5 * s * w) }
+        stroke(ctx, ahead, theme.routeAhead, (tileMode ? 3.6 : 3.2) * s * w)
 
         // Route already covered, with a soft glow.
         let done = CGMutablePath()
@@ -241,9 +249,9 @@ final class StylizedView: NSView {
             k <= runnerIndex ? self.points[k] : runnerPoint
         }
         // Covered route: a thick trail that ends exactly at the pin.
-        stroke(ctx, done, theme.glow, 22 * s)
-        stroke(ctx, done, NSColor.black.withAlphaComponent(tileMode ? 0.35 : 0.2), 10 * s)
-        stroke(ctx, done, theme.routeDone, 7 * s)
+        stroke(ctx, done, theme.glow, 22 * s * w)
+        stroke(ctx, done, NSColor.black.withAlphaComponent(tileMode ? 0.35 : 0.2), 10 * s * w)
+        stroke(ctx, done, theme.routeDone, 7 * s * w)
 
         drawFog(ctx, size: size, proj: proj)
 
@@ -554,16 +562,23 @@ final class StylizedView: NSView {
             ctx.setLineWidth(2.5 * s)
             ctx.strokePath()
         }
-        if let shadow = groundCircle(proj, center: p, radius: r * (glassPin ? 0.9 : 1.18)) {
+        if let shadow = groundCircle(proj, center: p, radius: r * 1.18) {
             ctx.saveGState()
             ctx.setShadow(offset: .zero, blur: 10 * s, color: NSColor.black.withAlphaComponent(0.7).cgColor)
             ctx.addPath(shadow)
-            ctx.setFillColor(NSColor.black.withAlphaComponent(glassPin ? 0.35 : 0.45).cgColor)
+            ctx.setFillColor(NSColor.black.withAlphaComponent(0.45).cgColor)
             ctx.fillPath()
             ctx.restoreGState()
         }
-        // The Liquid Glass bead is drawn by its own view, above this one.
-        guard !glassPin else { return }
+        // Liquid Glass: draw the puck's coloured base here; the glass top is its own view above.
+        if glassPin {
+            if let base = groundCircle(proj, center: p, radius: r) {
+                ctx.addPath(base)
+                ctx.setFillColor((theme.runner.blended(withFraction: 0.45, of: .black) ?? theme.runner).cgColor)
+                ctx.fillPath()
+            }
+            return
+        }
         guard let base = groundCircle(proj, center: p, radius: r),
               let rim = groundCircle(proj, center: top, radius: r),
               let centre = groundCircle(proj, center: top, radius: r * 0.64) else { return }

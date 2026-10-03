@@ -43,6 +43,7 @@ final class ConfigSheetController: NSObject {
     private let pinPopup = NSPopUpButton()
     private let pinStylePopup = NSPopUpButton()
     private let pinSizeControl = NSSegmentedControl()
+    private let pathWidthControl = NSSegmentedControl()
     private let trailPopup = NSPopUpButton()
     private let infoLabel = NSTextField(wrappingLabelWithString: "")
 
@@ -115,6 +116,7 @@ final class ConfigSheetController: NSObject {
                     row("Pin size", control: pinSizeControl),
                     row("Pin colour", control: pinPopup),
                     row("Trail colour", control: trailPopup),
+                    row("Path thickness", subtitle: "Thicker as you zoom in", control: pathWidthControl),
                 ], footer: note("The pin shows an arrow for the direction of travel. On Apple Maps the trail colour is used for the route's border.")),
             ]),
             Page(title: "Overlay", symbol: "rectangle.3.group.fill", tint: .systemIndigo, sections: [
@@ -339,7 +341,7 @@ final class ConfigSheetController: NSObject {
     }
 
     private func configureControls() {
-        for control in [pinStylePopup, pinSizeControl, stylePopup, hudPopup, fontPopup, panelPopup, frameRatePopup, displaysPopup,
+        for control in [pinStylePopup, pinSizeControl, pathWidthControl, stylePopup, hudPopup, fontPopup, panelPopup, frameRatePopup, displaysPopup,
                         pinPopup, trailPopup] as [NSControl] {
             control.target = self
             control.action = #selector(changed)
@@ -368,6 +370,9 @@ final class ConfigSheetController: NSObject {
         pinSizeControl.segmentCount = PinSize.allCases.count
         for (i, size) in PinSize.allCases.enumerated() { pinSizeControl.setLabel(size.title, forSegment: i) }
         pinSizeControl.trackingMode = .selectOne
+        pathWidthControl.segmentCount = PathWidth.allCases.count
+        for (i, w) in PathWidth.allCases.enumerated() { pathWidthControl.setLabel(w.title, forSegment: i) }
+        pathWidthControl.trackingMode = .selectOne
         frameRatePopup.removeAllItems()
         frameRatePopup.addItems(withTitles: ["30 fps", "60 fps"])
         displaysPopup.removeAllItems()
@@ -545,6 +550,7 @@ final class ConfigSheetController: NSObject {
         pinPopup.selectItem(at: AccentColor.allCases.firstIndex(of: config.pinColor) ?? 0)
         pinStylePopup.selectItem(at: PinStyle.allCases.firstIndex(of: config.pinStyle) ?? 0)
         pinSizeControl.selectedSegment = PinSize.allCases.firstIndex(of: config.pinSize) ?? 2
+        pathWidthControl.selectedSegment = PathWidth.allCases.firstIndex(of: config.pathWidth) ?? 1
         trailPopup.selectItem(at: AccentColor.allCases.firstIndex(of: config.trailColor) ?? 0)
         updateLabels()
     }
@@ -627,6 +633,7 @@ final class ConfigSheetController: NSObject {
         config.pinColor = AccentColor(rawValue: pinPopup.selectedItem?.representedObject as? String ?? "") ?? .auto
         config.pinStyle = PinStyle(rawValue: pinStylePopup.selectedItem?.representedObject as? String ?? "") ?? .glass
         config.pinSize = PinSize.allCases[max(0, pinSizeControl.selectedSegment)]
+        config.pathWidth = PathWidth.allCases[max(0, pathWidthControl.selectedSegment)]
         config.trailColor = AccentColor(rawValue: trailPopup.selectedItem?.representedObject as? String ?? "") ?? .auto
         updateLabels()
         settings.config = config

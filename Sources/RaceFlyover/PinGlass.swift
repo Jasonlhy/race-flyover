@@ -1,9 +1,9 @@
 import AppKit
 
-/// The runner's pin as a Liquid Glass bead (macOS 26+): a round glass view
-/// tinted with the pin colour, floating just above the road so the course
-/// refracts through it, with an arrow showing the direction of travel. Its
-/// shadow on the ground is drawn by the scene underneath.
+/// The runner's pin as a Liquid Glass puck (macOS 26+) lying on the road, like
+/// the solid pin: a round glass disc tinted with the pin colour, flattened by
+/// the camera's perspective, with an arrow on its face for the direction of
+/// travel. The scene underneath draws its coloured base and contact shadow.
 final class PinGlassView: NSView {
     private var glass: NSView?
     private let arrow = ArrowView()
@@ -25,20 +25,43 @@ final class PinGlassView: NSView {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
 
-    /// Centres the bead on `center` (superview coordinates) with `radius` points.
-    func place(center: CGPoint, radius: CGFloat, angle: CGFloat, color: NSColor) {
-        let d = (radius * 2).rounded()
+    /// - Parameters:
+    ///   - center: the puck's top-face centre, in superview coordinates.
+    ///   - radius: its horizontal radius on screen, in points.
+    ///   - squash: vertical foreshortening (1 = seen from directly above).
+    ///   - angle: direction of travel on the ground relative to the camera,
+    ///     radians clockwise from "away from the camera".
+    func place(center: CGPoint, radius: CGFloat, squash: CGFloat, angle: CGFloat, color: NSColor) {
+        let d = max(4, (radius * 2).rounded())
         let f = CGRect(x: (center.x - d / 2).rounded(), y: (center.y - d / 2).rounded(), width: d, height: d)
         if frame != f { frame = f }
         let inner = CGRect(origin: .zero, size: f.size)
         if #available(macOS 26.0, *), let g = glass as? NSGlassEffectView {
             if g.frame != inner { g.frame = inner }
             if g.cornerRadius != d / 2 { g.cornerRadius = d / 2 }
-            let tint = color.withAlphaComponent(0.55)
-            if g.tintColor != tint { g.tintColor = tint }
+            // Full-strength tint so the user's pin colour reads clearly through the glass.
+            if g.tintColor != color { g.tintColor = color }
         }
         if arrow.frame != inner { arrow.frame = inner }
         arrow.update(angle: angle, size: d)
+        flatten(squash: max(0.12, min(1, squash)))
+    }
+
+    /// Lays the disc and its arrow flat on the ground by squashing everything
+    /// vertically about the centre (a circle on the road seen at an angle).
+    private func flatten(squash: CGFloat) {
+        guard let layer else { return }
+        let size = bounds.size
+        let anchor = CGPoint(x: layer.anchorPoint.x * size.width, y: layer.anchorPoint.y * size.height)
+        let centre = CGPoint(x: size.width / 2, y: size.height / 2)
+        // Sublayer transforms act about the anchor point; scale about the centre instead.
+        let toCentre = CATransform3DMakeTranslation(anchor.x - centre.x, anchor.y - centre.y, 0)
+        let back = CATransform3DMakeTranslation(centre.x - anchor.x, centre.y - anchor.y, 0)
+        let t = CATransform3DConcat(CATransform3DConcat(toCentre, CATransform3DMakeScale(1, squash, 1)), back)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        layer.sublayerTransform = t
+        CATransaction.commit()
     }
 }
 

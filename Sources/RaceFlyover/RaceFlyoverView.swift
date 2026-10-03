@@ -363,19 +363,19 @@ public final class RaceFlyoverView: ScreenSaverView {
 
     private func placeGlassPin() {
         guard let pinGlass else { return }
-        var placement: (CGPoint, CGFloat, CGFloat)?
+        var placement: (point: CGPoint, radius: CGFloat, squash: CGFloat, angle: CGFloat)?
         if let liveMap, let p = liveMap.pinPlacement {
-            placement = (liveMap.convert(p.point, to: self), p.angle, p.radius)
+            placement = (liveMap.convert(p.point, to: self), p.radius, p.squash, p.angle)
         } else if liveMap == nil, let p = stylized.pinPlacement() {
-            placement = (stylized.convert(p.point, to: self), p.angle, p.radius)
+            placement = (stylized.convert(p.point, to: self), p.radius, p.squash, p.angle)
         }
-        guard let (point, angle, radius) = placement, engine?.phase != .fadeOut else {
+        guard let placement, engine?.phase != .fadeOut else {
             pinGlass.isHidden = true
             return
         }
         pinGlass.isHidden = false
-        // This view is unflipped; the bead lays itself out in its own flipped space.
-        pinGlass.place(center: point, radius: radius, angle: angle, color: stylized.theme.runner)
+        pinGlass.place(center: placement.point, radius: placement.radius, squash: placement.squash,
+                       angle: placement.angle, color: stylized.theme.runner)
     }
 
     public override func draw(_ rect: NSRect) {

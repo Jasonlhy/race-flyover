@@ -135,6 +135,7 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         let landmarks = config.showLandmarks ? LandmarkStore.shared.landmarks(for: course) : []
         let key = "\(course.id)|\(config.showFluid)|\(config.showFuel)|\(config.showMarkers)|\(config.units)|\(config.typeface)|\(appliedStyle ?? "")|\(landmarks.count)"
         if key != builtKey { rebuild(course, config: config, key: key) }
+        updateRouteWidth(cameraDistance: engine.camera.distance, config: config)
 
         let cam = engine.camera
         let camera = MKMapCamera(lookingAtCenter: cam.coordinate, fromDistance: cam.distance,
@@ -155,7 +156,7 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
 
     /// Where the pin is on screen (this view's unflipped coordinates), its heading
     /// (radians clockwise from screen-up) and radius, for the Liquid Glass bead.
-    private(set) var pinPlacement: (point: CGPoint, angle: CGFloat, radius: CGFloat)?
+    private(set) var pinPlacement: (point: CGPoint, radius: CGFloat, squash: CGFloat, angle: CGFloat)?
 
     private var pinRadius: CGFloat { 15 * (engine?.config.pinSize.scale ?? 2) }
 
@@ -173,8 +174,11 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
             Draw.radialGlow(ctx, center: CGPoint(x: rect.midX, y: rect.midY), radius: r * 1.9,
                             color: NSColor.black.withAlphaComponent(0.6))
         }
+        // Base: grey under the solid white top, or a deep shade of the pin colour under glass.
+        let glassBase = engine?.config.pinStyle.usesGlass ?? false
         pinBase.contents = disc(r * 2) { ctx, rect in
-            ctx.setFillColor(NSColor(white: 0.72, alpha: 1).cgColor)
+            let fill = glassBase ? (runner.blended(withFraction: 0.45, of: .black) ?? runner) : NSColor(white: 0.72, alpha: 1)
+            ctx.setFillColor(fill.cgColor)
             ctx.fillEllipse(in: rect)
         }
         pinTop.contents = disc(r * 2) { ctx, rect in
@@ -246,7 +250,7 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
 
     private func placePin(course: Course, distance: Double) {
         let config = engine?.config
-        let key = "\(theme.runner)|\(config?.pinSize.rawValue ?? "")"
+        let key = "\(theme.runner)|\(config?.pinSize.rawValue ?? "")|\(config?.pinStyle.usesGlass ?? false)"
         if pinKey != key {
             pinKey = key
             pinColor = theme.runner
@@ -270,7 +274,6 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         pinLayer.isHidden = !onScreen
         if onScreen { pinLayer.position = CGPoint(x: p.x.rounded(), y: p.y.rounded()) }
         let glass = config?.pinStyle.usesGlass ?? false
-        pinBase.isHidden = glass
         pinTop.isHidden = glass
         pinArrow.isHidden = glass
         for layer in [pinShadow, pinBase, pinTop] { layer.transform = flatten }
@@ -278,7 +281,8 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         let heading = engine.map { $0.course.heading(at: $0.distance) - $0.camera.heading } ?? 0
         pinArrow.transform = CATransform3DConcat(CATransform3DMakeRotation(CGFloat(-heading), 0, 0, 1), flatten)
         pinArrow.position = CGPoint(x: mid.x, y: mid.y + lift)
-        pinPlacement = onScreen ? (CGPoint(x: p.x, y: p.y + pinRadius * 0.9 * squash + lift), screenAngle, pinRadius) : nil
+        pinPlacement = onScreen ? (CGPoint(x: p.x, y: p.y + lift), pinRadius, squash, CGFloat(heading)) : nil
+        _ = screenAngle
         spawnBursts(squash: squash)
         pinShadow.position = mid
         pinBase.position = mid
@@ -351,6 +355,7 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
 
     private func rebuild(_ course: Course, config: Config, key: String) {
         builtKey = key
+        renderers.removeAll()
         map.removeOverlays(map.overlays)
         map.removeAnnotations(map.annotations)
 
@@ -385,6 +390,21 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         map.addAnnotations(annotations)
     }
 
+    private var routeWidth: CGFloat = 1
+    private var renderers: [MKPolylineRenderer] = []
+
+    /// Thicker route when zoomed in (and per the option); only re-renders when it
+    /// changes noticeably, e.g. during the intro swoop, not every frame.
+    private func updateRouteWidth(cameraDistance: Double, config: Config) {
+        let w = PathWidth.zoomFactor(cameraDistance: cameraDistance) * config.pathWidth.scale
+        guard abs(w - routeWidth) / routeWidth > 0.08 else { return }
+        routeWidth = w
+        for r in renderers {
+            r.lineWidth = ((r.polyline.title == "casing") ? 11 : 4.5) * w
+            r.setNeedsDisplay()
+        }
+    }
+
     /// The route's border: the chosen trail colour, or blue by default.
     private var trailBorder: NSColor {
         (engine?.config.trailColor.color ?? Theme.hex(0x0A84FF)).withAlphaComponent(0.95)
@@ -402,11 +422,12 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         switch (overlay as? MKPolyline)?.title {
         case "casing":
             r.strokeColor = trailBorder
-            r.lineWidth = 11
+            r.lineWidth = 11 * routeWidth
         default:
             r.strokeColor = NSColor.white.withAlphaComponent(0.95)
-            r.lineWidth = 4.5
+            r.lineWidth = 4.5 * routeWidth
         }
+        renderers.append(r)
         return r
     }
 

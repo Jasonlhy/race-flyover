@@ -81,6 +81,33 @@ enum PinSize: String, CaseIterable {
     }
 }
 
+enum PathWidth: String, CaseIterable {
+    case thin, regular, thick, extraThick
+
+    var title: String {
+        switch self {
+        case .thin: return "S"
+        case .regular: return "M"
+        case .thick: return "L"
+        case .extraThick: return "XL"
+        }
+    }
+
+    var scale: CGFloat {
+        switch self {
+        case .thin: return 0.6
+        case .regular: return 1
+        case .thick: return 1.6
+        case .extraThick: return 2.4
+        }
+    }
+
+    /// Paths get thicker as the camera comes closer, like a real road, within limits.
+    static func zoomFactor(cameraDistance d: Double) -> CGFloat {
+        CGFloat(min(2.6, max(0.55, pow(1000 / max(d, 50), 0.6))))
+    }
+}
+
 enum PinStyle: String, CaseIterable {
     case glass, solid
 
@@ -195,6 +222,7 @@ struct Config: Equatable {
     var showBursts = true             // ring pulse when passing stations and markers
     var showLandmarks = true
     var pinSize = PinSize.large
+    var pathWidth = PathWidth.regular
     var pinStyle = PinStyle.glass
     var pinColor = AccentColor.auto
     var trailColor = AccentColor.auto
@@ -240,6 +268,7 @@ final class Settings {
             if d.object(forKey: "showLandmarks") != nil { c.showLandmarks = d.bool(forKey: "showLandmarks") }
             if let v = d.string(forKey: "pinColor").flatMap(AccentColor.init) { c.pinColor = v }
             if let v = d.string(forKey: "pinSize").flatMap(PinSize.init) { c.pinSize = v }
+            if let v = d.string(forKey: "pathWidth").flatMap(PathWidth.init) { c.pathWidth = v }
             if let v = d.string(forKey: "pinStyle").flatMap(PinStyle.init) { c.pinStyle = v }
             if let v = d.string(forKey: "trailColor").flatMap(AccentColor.init) { c.trailColor = v }
             if d.object(forKey: "textScale") != nil { c.textScale = min(max(d.double(forKey: "textScale"), 0.6), 1.6) }
@@ -269,6 +298,7 @@ final class Settings {
             d.set(newValue.showLandmarks, forKey: "showLandmarks")
             d.set(newValue.pinColor.rawValue, forKey: "pinColor")
             d.set(newValue.pinSize.rawValue, forKey: "pinSize")
+            d.set(newValue.pathWidth.rawValue, forKey: "pathWidth")
             d.set(newValue.pinStyle.rawValue, forKey: "pinStyle")
             d.set(newValue.trailColor.rawValue, forKey: "trailColor")
             d.set(newValue.textScale, forKey: "textScale")

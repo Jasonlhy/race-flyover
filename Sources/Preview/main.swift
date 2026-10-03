@@ -44,6 +44,7 @@ func applyOverrides(_ view: RaceFlyoverView) {
         if let v = option("--map3d") { c.map3D = v != "off" }
         if let v = option("--pin-size").flatMap(PinSize.init) { c.pinSize = v }
         if let v = option("--pin-style").flatMap(PinStyle.init) { c.pinStyle = v }
+        if let v = option("--path").flatMap(PathWidth.init) { c.pathWidth = v }
         if let v = option("--fps").flatMap(Int.init) { c.smooth60 = v >= 60 }
         if let v = option("--trail").flatMap(AccentColor.init) { c.trailColor = v }
         if let v = option("--text-scale").flatMap(Double.init) { c.textScale = v }

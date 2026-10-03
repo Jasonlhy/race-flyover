@@ -39,8 +39,8 @@ stations, a minimap of the whole course, and the elevation profile along the bot
 - **A minimap** of the whole course showing where you are, with the name of the neighbourhood
   you're running through.
 - **An elevation profile** so you can see the hills coming, plus the total climb.
-- **The runner's pin**: a Liquid Glass bead floating just above the road (or a solid puck lying on
-  it), with an arrow showing which way you're heading, a trail behind it, and a pulse whenever you
+- **The runner's pin**: a Liquid Glass (or solid) puck lying on the road, tinted in your chosen
+  colour, with an arrow showing which way you're heading, a trail behind it, and a pulse whenever you
   pass a station, a marker or halfway. Choose its size and colour.
 - **Automatic tilt**: the camera looks down more steeply where the streets are packed with
   buildings, so they don't hide the route, and flies lower over parks, rivers and open roads.
@@ -58,7 +58,7 @@ settings are grouped like the rest of System Settings:
 |---|---|
 | **Courses** | Tick the races you want; they play one after another. Import your own race. Choose how long a full course takes, from a two-minute tour to a real-time four hours. |
 | **Camera** | Follow behind the runner, keep north at the top, or watch the whole course from above with a slow orbit. Adjust how steeply the camera looks down and how close it sits, or let it adjust the tilt automatically to how built-up each area is. |
-| **Appearance** | Fly over Apple Maps (satellite or street map, with optional 3D buildings), or one of five drawn looks: Midnight, Neon Grid, Daylight, Blueprint and Minimal Mono. Choose the pin's style (Liquid Glass or solid), size and colour, and the trail colour. |
+| **Appearance** | Fly over Apple Maps (satellite or street map, with optional 3D buildings), or one of five drawn looks: Midnight, Neon Grid, Daylight, Blueprint and Minimal Mono. Choose the pin's style (Liquid Glass or solid), size and colour, and the trail's colour and thickness. |
 | **Overlay** | Show all the information panels, just the essentials, or nothing. Solid panels or Apple's Liquid Glass. Kilometres or miles. Pick a typeface and text size. |
 | **On the Route** | Turn water stations, fuel stations, distance markers, the passing pulse and landmarks on or off. |
 | **Performance** | Choose what happens on multiple screens and set the frame rate. |
