@@ -143,11 +143,11 @@ struct HUDRenderer {
         if let month = course.data.month { sub += "  ·  " + month }
         let subtitle = line(Draw.text(sub, size: 14.5 * s, color: theme.textSecondary))
         var lines = [eyebrow, name, subtitle]
-        var gaps = [9 * s, 10 * s]
+        var gaps = [15 * s, 15 * s]
         if course.data.stationsEstimated == true {
             lines.append(line(Draw.text("Aid stations estimated (every 5 km). Check the race guide.",
                                         size: 11.5 * s, color: theme.fuel)))
-            gaps.append(10 * s)
+            gaps.append(14 * s)
         }
         let (tops, height) = stack(lines, gaps: gaps)
         let width = lines.map(\.width).max() ?? 0

@@ -2,10 +2,6 @@ import AppKit
 import MapKit
 import os
 
-private final class RunnerAnnotation: NSObject, MKAnnotation {
-    @objc dynamic var coordinate = CLLocationCoordinate2D()
-}
-
 private final class StationAnnotation: NSObject, MKAnnotation {
     let coordinate: CLLocationCoordinate2D
     let station: Station
@@ -40,7 +36,11 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
 
     static let log = Logger(subsystem: "com.raceflyover", category: "map")
     private let map = MKMapView()
-    private let runner = RunnerAnnotation()
+    /// The runner's pin, drawn in our own layer above the map and positioned
+    /// from the camera each frame. (A MapKit annotation is repositioned on
+    /// MapKit's own schedule, so at speed it jitters against the moving map.)
+    private let pinLayer = CALayer()
+    private var pinColor: NSColor?
     private var appliedStyle: String?
     private var builtKey = ""
     private var theme = Theme.forStyle(.satellite)
@@ -67,6 +67,9 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         map.showsScale = false
         map.showsUserLocation = false
         addSubview(map)
+        pinLayer.zPosition = 10
+        pinLayer.actions = ["position": NSNull(), "contents": NSNull(), "hidden": NSNull(), "bounds": NSNull()]
+        layer?.addSublayer(pinLayer)
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
@@ -127,10 +130,34 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         let camera = MKMapCamera(lookingAtCenter: cam.coordinate, fromDistance: cam.distance,
                                  pitch: CGFloat(cam.tilt * 180 / .pi), heading: cam.heading * 180 / .pi)
         map.setCamera(camera, animated: false)
-        runner.coordinate = course.sample(at: engine.distance).coordinate
+        placePin(at: course.sample(at: engine.distance).coordinate)
 
         healSurface()
         diagnose()
+    }
+
+    private func placePin(at coordinate: CLLocationCoordinate2D) {
+        if pinColor != theme.runner {
+            pinColor = theme.runner
+            let size: CGFloat = 60
+            let image = Self.image(size: size) { [theme] ctx, r in
+                Draw.radialGlow(ctx, center: CGPoint(x: r.midX, y: r.midY), radius: 30, color: theme.runner.withAlphaComponent(0.45))
+                Theme.drawPin(ctx, at: CGPoint(x: r.midX, y: r.midY), radius: 15, color: theme.runner)
+            }
+            let scale = window?.backingScaleFactor ?? 2
+            var rect = CGRect(x: 0, y: 0, width: size, height: size)
+            pinLayer.contents = image.cgImage(forProposedRect: &rect, context: nil, hints: [.ctm: AffineTransform(scale: scale)])
+            pinLayer.contentsScale = scale
+            pinLayer.bounds = CGRect(x: 0, y: 0, width: size, height: size)
+        }
+        // Same camera MapKit just received, so the pin lands exactly on the route.
+        let p = map.convert(coordinate, toPointTo: self)
+        let onScreen = p.x.isFinite && p.y.isFinite && bounds.insetBy(dx: -60, dy: -60).contains(p)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        pinLayer.isHidden = !onScreen
+        if onScreen { pinLayer.position = CGPoint(x: p.x.rounded(), y: p.y.rounded()) }
+        CATransaction.commit()
     }
 
     // MARK: - Surface repair and diagnostics
@@ -189,7 +216,8 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         let line = "t=\(Int(age))s window=\(w.map { String(describing: type(of: $0)) } ?? "nil") "
             + "visible=\(w?.isVisible ?? false) occluded=\(occluded) backing=\(w?.backingScaleFactor ?? 0) "
             + "screen=\(w?.screen != nil) view=\(Int(bounds.width))x\(Int(bounds.height)) "
-            + "loaded=\(loaded) heals=\(healCount) zeroFrames=\(zeroDrawableFrames) metal=[\(metal)]"
+            + "loaded=\(loaded) heals=\(healCount) zeroFrames=\(zeroDrawableFrames) metal=[\(metal)] "
+            + "pin=\(Int(pinLayer.position.x)),\(Int(pinLayer.position.y)) centre=\(Int(bounds.midX)),\(Int(bounds.midY)) pinHidden=\(pinLayer.isHidden)"
         Self.log.notice("\(line, privacy: .public)")
     }
 
@@ -226,7 +254,6 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         annotations.append(MarkerAnnotation("START", at: coords[0]))
         annotations.append(MarkerAnnotation("FINISH", at: coords[coords.count - 1], highlight: true))
         map.addAnnotations(annotations)
-        map.addAnnotation(runner)
     }
 
     /// The route's border: the chosen trail colour, or blue by default.
@@ -260,12 +287,6 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         view.displayPriority = .required
         let theme = self.theme
         switch annotation {
-        case is RunnerAnnotation:
-            view.image = Self.image(size: 56) { ctx, r in
-                Draw.radialGlow(ctx, center: CGPoint(x: r.midX, y: r.midY), radius: 28, color: theme.runner.withAlphaComponent(0.45))
-                Theme.drawPin(ctx, at: CGPoint(x: r.midX, y: r.midY), radius: 15, color: theme.runner)
-            }
-            view.zPriority = .max
         case let st as StationAnnotation:
             view.image = Self.image(size: 30) { ctx, r in
                 Draw.stationBadge(ctx, center: CGPoint(x: r.midX, y: r.midY), radius: 12, station: st.station,
