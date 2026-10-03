@@ -40,11 +40,15 @@ Then open **System Settings › Screen Saver**, pick **Race Flyover**, and click
 | Tilt | 0° is a top-down map; 70°+ is a low flyover with the horizon in view. |
 | Zoom | Camera distance from the runner, from ~220 m (street level) to ~8 km (whole city). |
 | Visuals | **Apple Maps Satellite**, **Apple Maps Satellite + labels**, **Apple Maps (Dark)** and **Apple Maps (Light)** fly over live Apple Maps with realistic 3D terrain and buildings (needs internet). **Midnight**, **Neon Grid**, **Daylight**, **Blueprint** and **Minimal Mono** are stylized and work offline. |
+| 3D buildings & terrain | Apple Maps styles only. On: realistic 3D city and terrain. Off: flat Apple Maps, roughly a third of the CPU load. |
 | Hill exaggeration | Vertical scale of the elevation curtain in stylized visuals. |
 | Overlay | Full HUD (title with country flag; distance panel with a minimap of the whole course and the current neighbourhood; next fluid/fuel; elevation profile), Minimal, or Off. Units in km or miles. |
 | Panels | **Solid**, **Liquid Glass** or **Liquid Glass (Clear)** (macOS 26+): real system glass behind the HUD panels and title cards, refracting the course moving underneath. |
 | Typeface | SF Pro, SF Pro Rounded, New York, SF Mono, Avenir Next, Helvetica Neue, Futura, Gill Sans or DIN Condensed, with overlay size S / M / L / XL. |
+| Pin & trail | Colours for the runner's pin and the trail it leaves (or match the visual style). |
 | Show | Toggle fluid stations, fuel stations and distance markers. |
+| Displays | **Same course on every screen** (synced), **Different course on each screen**, or **Main display only** (other screens stay black; the biggest saving on multi-screen setups). |
+| Frame rate | 30 fps (recommended) or 60 fps. Frames are synced to the display refresh either way. |
 
 Each course plays as: title card → swoop from the overview into the chase camera → run → finish card → pull back → next course.
 The title and finish cards sit at the bottom of the screen, clear of the clock macOS shows at the top while the screensaver runs.
@@ -103,8 +107,11 @@ station overrides.
 - The host creates a new view whenever the preview restarts and doesn't always free old ones;
   Race Flyover stops those and tears down their maps so they can't exhaust GPU resources.
 - In the small System Settings thumbnail, Apple Maps styles show as Midnight.
-- Stylized visuals use about a quarter of one CPU core at 4K and 30 fps. Apple Maps styles
-  use more. "Smooth animation" doubles the frame rate.
+- **Performance.** Measured at 2560×1440 with the live Apple Maps satellite style: about 93% of
+  one CPU core with 3D buildings & terrain on, about 33% with it off (30 fps); 60 fps adds roughly
+  10%. Almost all of that is MapKit itself. Stylized visuals are far lighter. Each screen renders its
+  own copy, so **Main display only** roughly halves the load on two screens. Frame timing is logged
+  to `log show --predicate 'subsystem == "com.raceflyover" AND category == "perf"'`.
 - Snapshot testing: `build/RaceFlyoverPreview.app/Contents/MacOS/RaceFlyoverPreview --snapshot out.png --course boston --progress 0.78 --style daylight`
   (see `Sources/Preview/main.swift` for all flags; `--list` prints the loaded courses).
 

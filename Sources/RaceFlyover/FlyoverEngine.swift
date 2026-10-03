@@ -79,6 +79,19 @@ final class FlyoverEngine {
         updateCamera()
     }
 
+    /// Copies another engine's playback state ("same course on every screen").
+    /// The camera is still computed here, for this screen's shape.
+    func mirror(_ other: FlyoverEngine) {
+        if playlist.map(\.id) != other.playlist.map(\.id) { playlist = other.playlist }
+        index = min(other.index, playlist.count - 1)
+        phase = other.phase
+        phaseTime = other.phaseTime
+        time = other.time
+        distance = other.distance
+        heading = other.heading
+        updateCamera()
+    }
+
     /// Moves the runner by `metres` (preview app arrow keys).
     func jump(by metres: Double) {
         if phase != .running { phase = .running; phaseTime = 0 }

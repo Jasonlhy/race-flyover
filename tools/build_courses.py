@@ -107,7 +107,7 @@ COURSES = [
 FUEL_WORDS = ("gel", "maurten", "gu ", "gu,", "shot", "banana", "food", "bread", "candy",
               "chocolate", "orange", "bean", "plum", "fruit", "energy")
 FLUID_WORDS = ("water", "gatorade", "drink", "electrolyte", "electrolit", "fluid",
-               "refreshment", "isotonic", "tea", "sports", "aid station", "food")
+               "refreshment", "isotonic", "tea", "sports drink", "aid station", "food")
 SKIP_WORDS = ("cheer", "biofreeze", "halfway", "finish", "start", "medical tent", "toilet")
 
 # ---------------------------------------------------------------------------

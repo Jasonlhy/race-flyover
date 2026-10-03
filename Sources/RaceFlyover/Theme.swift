@@ -21,6 +21,33 @@ struct Theme {
     var stars: Bool = false
     var sun: NSColor?
 
+    /// Applies the user's pin and trail colours on top of a style's palette.
+    func with(pin: AccentColor, trail: AccentColor) -> Theme {
+        var t = self
+        if let c = trail.color {
+            t.routeDone = c
+            t.glow = c.withAlphaComponent(0.28)
+            if t.curtain.alphaComponent > 0 { t.curtain = c.withAlphaComponent(0.14) }
+        }
+        // The pin is filled with its colour and ringed in white, so by default it
+        // takes the trail colour (white-on-white would vanish).
+        t.runner = pin.color ?? t.routeDone
+        return t
+    }
+
+    /// Large location pin: coloured disc, thick white ring, soft drop shadow.
+    static func drawPin(_ ctx: CGContext, at c: CGPoint, radius r: CGFloat, color: NSColor) {
+        ctx.saveGState()
+        ctx.setShadow(offset: CGSize(width: 0, height: r * 0.25), blur: r * 0.9,
+                      color: NSColor.black.withAlphaComponent(0.55).cgColor)
+        ctx.setFillColor(NSColor.white.cgColor)
+        ctx.fillEllipse(in: CGRect(x: c.x - r, y: c.y - r, width: r * 2, height: r * 2))
+        ctx.restoreGState()
+        let inner = r * 0.66
+        ctx.setFillColor(color.cgColor)
+        ctx.fillEllipse(in: CGRect(x: c.x - inner, y: c.y - inner, width: inner * 2, height: inner * 2))
+    }
+
     static func hex(_ v: UInt32, _ a: CGFloat = 1) -> NSColor {
         NSColor(srgbRed: CGFloat((v >> 16) & 0xFF) / 255, green: CGFloat((v >> 8) & 0xFF) / 255,
                 blue: CGFloat(v & 0xFF) / 255, alpha: a)

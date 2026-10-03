@@ -46,6 +46,40 @@ enum HUDMode: String, CaseIterable {
     }
 }
 
+enum DisplayMode: String, CaseIterable {
+    case same, different, mainOnly
+
+    var title: String {
+        switch self {
+        case .same: return "Same course on every screen"
+        case .different: return "Different course on each screen"
+        case .mainOnly: return "Main display only (best performance)"
+        }
+    }
+}
+
+/// Pin and trail colours. `auto` follows the visual style.
+enum AccentColor: String, CaseIterable {
+    case auto, red, orange, yellow, green, teal, blue, purple, pink, white
+
+    var title: String { self == .auto ? "Match style" : rawValue.capitalized }
+
+    var color: NSColor? {
+        switch self {
+        case .auto: return nil
+        case .red: return Theme.hex(0xFF3B30)
+        case .orange: return Theme.hex(0xFF8A00)
+        case .yellow: return Theme.hex(0xFFD60A)
+        case .green: return Theme.hex(0x34C759)
+        case .teal: return Theme.hex(0x30D5C8)
+        case .blue: return Theme.hex(0x0A84FF)
+        case .purple: return Theme.hex(0xBF5AF2)
+        case .pink: return Theme.hex(0xFF375F)
+        case .white: return Theme.hex(0xFFFFFF)
+        }
+    }
+}
+
 enum PanelStyle: String, CaseIterable {
     case solid, glass, clearGlass
 
@@ -123,6 +157,10 @@ struct Config: Equatable {
     var typeface = Typeface.system
     var textScale = 1.0               // overlay size multiplier
     var panels = PanelStyle.solid
+    var displays = DisplayMode.same
+    var map3D = true                  // realistic 3D terrain and buildings in Apple Maps styles
+    var pinColor = AccentColor.auto
+    var trailColor = AccentColor.auto
 
     /// Camera distance in metres for the chase camera.
     var cameraDistance: Double { 220 * pow(36, zoom) }
@@ -158,6 +196,10 @@ final class Settings {
             if d.object(forKey: "smooth60") != nil { c.smooth60 = d.bool(forKey: "smooth60") }
             if let v = d.string(forKey: "typeface").flatMap(Typeface.init) { c.typeface = v }
             if let v = d.string(forKey: "panels").flatMap(PanelStyle.init) { c.panels = v }
+            if let v = d.string(forKey: "displays").flatMap(DisplayMode.init) { c.displays = v }
+            if d.object(forKey: "map3D") != nil { c.map3D = d.bool(forKey: "map3D") }
+            if let v = d.string(forKey: "pinColor").flatMap(AccentColor.init) { c.pinColor = v }
+            if let v = d.string(forKey: "trailColor").flatMap(AccentColor.init) { c.trailColor = v }
             if d.object(forKey: "textScale") != nil { c.textScale = min(max(d.double(forKey: "textScale"), 0.6), 1.6) }
             return c
         }
@@ -178,6 +220,10 @@ final class Settings {
             d.set(newValue.smooth60, forKey: "smooth60")
             d.set(newValue.typeface.rawValue, forKey: "typeface")
             d.set(newValue.panels.rawValue, forKey: "panels")
+            d.set(newValue.displays.rawValue, forKey: "displays")
+            d.set(newValue.map3D, forKey: "map3D")
+            d.set(newValue.pinColor.rawValue, forKey: "pinColor")
+            d.set(newValue.trailColor.rawValue, forKey: "trailColor")
             d.set(newValue.textScale, forKey: "textScale")
             d.synchronize()
             NotificationCenter.default.post(name: Settings.didChange, object: nil)

@@ -33,7 +33,11 @@ final class ConfigSheetController: NSObject {
     private let fluidCheck = NSButton(checkboxWithTitle: "Fluid stations", target: nil, action: nil)
     private let fuelCheck = NSButton(checkboxWithTitle: "Fuel stations", target: nil, action: nil)
     private let markersCheck = NSButton(checkboxWithTitle: "Distance markers", target: nil, action: nil)
-    private let smoothCheck = NSButton(checkboxWithTitle: "Smooth animation (60 fps, uses more power)", target: nil, action: nil)
+    private let frameRatePopup = NSPopUpButton()
+    private let displaysPopup = NSPopUpButton()
+    private let map3DCheck = NSButton(checkboxWithTitle: "3D buildings & terrain (heavier)", target: nil, action: nil)
+    private let pinPopup = NSPopUpButton()
+    private let trailPopup = NSPopUpButton()
     private let infoLabel = NSTextField(wrappingLabelWithString: "")
 
     init(settings: Settings) {
@@ -79,7 +83,26 @@ final class ConfigSheetController: NSObject {
             slider.controlSize = .regular
             slider.widthAnchor.constraint(greaterThanOrEqualToConstant: 240).isActive = true
         }
-        for check in [fluidCheck, fuelCheck, markersCheck, smoothCheck] {
+        for popup in [frameRatePopup, displaysPopup, pinPopup, trailPopup] {
+            popup.target = self
+            popup.action = #selector(changed)
+        }
+        frameRatePopup.removeAllItems()
+        frameRatePopup.addItems(withTitles: ["30 fps (lighter, recommended)", "60 fps (smoother, heavier)"])
+        displaysPopup.removeAllItems()
+        for mode in DisplayMode.allCases {
+            displaysPopup.addItem(withTitle: mode.title)
+            displaysPopup.lastItem?.representedObject = mode.rawValue
+        }
+        for popup in [pinPopup, trailPopup] {
+            popup.removeAllItems()
+            for c in AccentColor.allCases {
+                popup.addItem(withTitle: c.title)
+                popup.lastItem?.representedObject = c.rawValue
+                popup.lastItem?.image = Self.swatch(c)
+            }
+        }
+        for check in [fluidCheck, fuelCheck, markersCheck, map3DCheck] {
             check.target = self
             check.action = #selector(changed)
         }
@@ -178,18 +201,21 @@ final class ConfigSheetController: NSObject {
             row("Tilt:", [column([tiltSlider, tiltLabel])]),
             row("Zoom:", [column([zoomSlider, zoomLabel])]),
             row("Visuals:", [stylePopup]),
+            [NSGridCell.emptyContentView, map3DCheck],
             row("Hill exaggeration:", [column([exaggerationSlider, exaggerationLabel])]),
             row("Overlay:", [hudPopup, unitsControl]),
             row("Panels:", [panelPopup]),
             row("Typeface:", [fontPopup, NSTextField(labelWithString: "Size"), sizeControl]),
+            row("Pin & trail:", [pinPopup, NSTextField(labelWithString: "Trail"), trailPopup]),
             row("Show:", [fluidCheck, fuelCheck, markersCheck]),
-            [NSGridCell.emptyContentView, smoothCheck],
+            row("Displays:", [displaysPopup]),
+            row("Frame rate:", [frameRatePopup]),
         ])
         grid.column(at: 0).xPlacement = .trailing
         grid.rowSpacing = 12
         grid.columnSpacing = 10
         grid.rowAlignment = .firstBaseline
-        for i in [2, 4, 5, 7] { grid.row(at: i).rowAlignment = .none; grid.row(at: i).yPlacement = .top }
+        for i in [2, 4, 5, 8] { grid.row(at: i).rowAlignment = .none; grid.row(at: i).yPlacement = .top }
 
         let cancel = NSButton(title: "Cancel", target: self, action: #selector(cancel))
         cancel.keyEquivalent = "\u{1b}"
@@ -259,7 +285,11 @@ final class ConfigSheetController: NSObject {
         fluidCheck.state = config.showFluid ? .on : .off
         fuelCheck.state = config.showFuel ? .on : .off
         markersCheck.state = config.showMarkers ? .on : .off
-        smoothCheck.state = config.smooth60 ? .on : .off
+        frameRatePopup.selectItem(at: config.smooth60 ? 1 : 0)
+        displaysPopup.selectItem(at: DisplayMode.allCases.firstIndex(of: config.displays) ?? 0)
+        map3DCheck.state = config.map3D ? .on : .off
+        pinPopup.selectItem(at: AccentColor.allCases.firstIndex(of: config.pinColor) ?? 0)
+        trailPopup.selectItem(at: AccentColor.allCases.firstIndex(of: config.trailColor) ?? 0)
         updateLabels()
     }
 
@@ -278,6 +308,7 @@ final class ConfigSheetController: NSObject {
         exaggerationLabel.stringValue = String(format: "%.0f× vertical (stylized visuals only)", config.exaggeration)
         exaggerationSlider.isEnabled = !config.style.usesTiles
         zoomSlider.isEnabled = config.camera != .overview
+        map3DCheck.isEnabled = config.style.usesTiles
 
         let selected = coursePopup.selectedItem?.representedObject as? String ?? ""
         let courses = CourseLibrary.all(settings: settings)
@@ -293,6 +324,23 @@ final class ConfigSheetController: NSObject {
         }
         if config.style.usesTiles {
             infoLabel.stringValue += "\nApple Maps styles need an internet connection the first time (imagery is cached)."
+        }
+    }
+
+    /// Round colour swatch for the pin/trail menus ("Match style" shows a split disc).
+    private static func swatch(_ c: AccentColor) -> NSImage {
+        NSImage(size: NSSize(width: 14, height: 14), flipped: false) { r in
+            let circle = NSBezierPath(ovalIn: r.insetBy(dx: 1, dy: 1))
+            if let color = c.color {
+                color.setFill()
+                circle.fill()
+            } else {
+                NSGradient(colors: [Theme.hex(0x5EF0FF), Theme.hex(0xFF3D71)])?.draw(in: circle, angle: 45)
+            }
+            NSColor.black.withAlphaComponent(0.25).setStroke()
+            circle.lineWidth = 1
+            circle.stroke()
+            return true
         }
     }
 
@@ -314,7 +362,11 @@ final class ConfigSheetController: NSObject {
         config.showFluid = fluidCheck.state == .on
         config.showFuel = fuelCheck.state == .on
         config.showMarkers = markersCheck.state == .on
-        config.smooth60 = smoothCheck.state == .on
+        config.smooth60 = frameRatePopup.indexOfSelectedItem == 1
+        config.displays = DisplayMode(rawValue: displaysPopup.selectedItem?.representedObject as? String ?? "") ?? .same
+        config.map3D = map3DCheck.state == .on
+        config.pinColor = AccentColor(rawValue: pinPopup.selectedItem?.representedObject as? String ?? "") ?? .auto
+        config.trailColor = AccentColor(rawValue: trailPopup.selectedItem?.representedObject as? String ?? "") ?? .auto
         updateLabels()
         settings.config = config
     }

@@ -41,10 +41,11 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
     private static let log = Logger(subsystem: "com.raceflyover", category: "map")
     private let map = MKMapView()
     private let runner = RunnerAnnotation()
-    private var appliedStyle: VisualStyle?
+    private var appliedStyle: String?
     private var builtKey = ""
     private var doneLine: MKPolyline?
-    private var doneIndex = -1
+    private var doneDistance = -1.0
+    private var doneUpdatedAt = 0.0
     private var theme = Theme.forStyle(.satellite)
     private let createdAt = CACurrentMediaTime()
     private var lastDiagnostic = 0.0
@@ -75,19 +76,23 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
 
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
-    private func apply(style: VisualStyle) {
-        guard style != appliedStyle else { return }
-        appliedStyle = style
-        theme = Theme.forStyle(style)
+    private func apply(_ config: Config) {
+        let style = config.style
+        let key = "\(style)|\(config.map3D)|\(config.pinColor)|\(config.trailColor)"
+        guard key != appliedStyle else { return }
+        appliedStyle = key
+        theme = Theme.forStyle(style).with(pin: config.pinColor, trail: config.trailColor)
+        // Realistic elevation (3D terrain and buildings) is MapKit's heaviest mode.
+        let elevation: MKMapConfiguration.ElevationStyle = config.map3D ? .realistic : .flat
         switch style {
         case .satellitePlain:
-            map.preferredConfiguration = MKImageryMapConfiguration(elevationStyle: .realistic)
+            map.preferredConfiguration = MKImageryMapConfiguration(elevationStyle: elevation)
         case .satellite:
-            let c = MKHybridMapConfiguration(elevationStyle: .realistic)
+            let c = MKHybridMapConfiguration(elevationStyle: elevation)
             c.pointOfInterestFilter = .excludingAll
             map.preferredConfiguration = c
         default:
-            let c = MKStandardMapConfiguration(elevationStyle: .realistic, emphasisStyle: .muted)
+            let c = MKStandardMapConfiguration(elevationStyle: elevation, emphasisStyle: .muted)
             c.pointOfInterestFilter = .excludingAll
             map.preferredConfiguration = c
         }
@@ -116,9 +121,9 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         guard !isShutDown, let engine else { return }
         if let window { MapVisibility.forceVisible(window) }
         let config = engine.config
-        apply(style: config.style)
+        apply(config)
         let course = engine.course
-        let key = "\(course.id)|\(config.showFluid)|\(config.showFuel)|\(config.showMarkers)|\(config.units)|\(config.typeface)"
+        let key = "\(course.id)|\(config.showFluid)|\(config.showFuel)|\(config.showMarkers)|\(config.units)|\(config.typeface)|\(appliedStyle ?? "")"
         if key != builtKey { rebuild(course, config: config, key: key) }
 
         let cam = engine.camera
@@ -127,8 +132,14 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         map.setCamera(camera, animated: false)
         runner.coordinate = course.sample(at: engine.distance).coordinate
 
-        let (i, _) = course.locate(engine.distance)
-        if i < doneIndex || i - doneIndex >= 6 { updateDoneLine(course, upTo: i) }
+        // Keep the trail glued to the pin: refresh it every few metres (scaled to
+        // the zoom so it's always sub-pixel-ish), at most ~12 times a second.
+        let now = CACurrentMediaTime()
+        let step = max(4, cam.distance / 300)
+        if engine.distance < doneDistance || (engine.distance - doneDistance >= step && now - doneUpdatedAt > 0.08) {
+            updateDoneLine(course, at: engine.distance)
+            doneUpdatedAt = now
+        }
 
         healSurface()
         diagnose()
@@ -201,7 +212,7 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         map.removeOverlays(map.overlays)
         map.removeAnnotations(map.annotations)
         doneLine = nil
-        doneIndex = -1
+        doneDistance = -1
 
         let coords = course.lat.indices.map { CLLocationCoordinate2D(latitude: course.lat[$0], longitude: course.lon[$0]) }
         let casing = MKPolyline(coordinates: coords, count: coords.count)
@@ -232,16 +243,22 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         map.addAnnotation(runner)
     }
 
-    private func updateDoneLine(_ course: Course, upTo i: Int) {
-        doneIndex = i
-        if let doneLine { map.removeOverlay(doneLine) }
-        guard i > 0 else { doneLine = nil; return }
-        var coords = (0...i).map { CLLocationCoordinate2D(latitude: course.lat[$0], longitude: course.lon[$0]) }
-        coords.append(course.sample(at: engine?.distance ?? 0).coordinate)
-        let line = MKPolyline(coordinates: coords, count: coords.count)
-        line.title = "done"
-        map.addOverlay(line, level: .aboveRoads)
-        doneLine = line
+    private func updateDoneLine(_ course: Course, at distance: Double) {
+        doneDistance = distance
+        let old = doneLine
+        let (i, _) = course.locate(distance)
+        if distance > 1 {
+            var coords = (0...i).map { CLLocationCoordinate2D(latitude: course.lat[$0], longitude: course.lon[$0]) }
+            coords.append(course.sample(at: distance).coordinate)
+            let line = MKPolyline(coordinates: coords, count: coords.count)
+            line.title = "done"
+            // Add the new trail before removing the old one so it never flickers.
+            map.addOverlay(line, level: .aboveRoads)
+            doneLine = line
+        } else {
+            doneLine = nil
+        }
+        if let old { map.removeOverlay(old) }
     }
 
     // MARK: - MKMapViewDelegate
@@ -256,7 +273,7 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
             r.lineWidth = 9
         case "done":
             r.strokeColor = theme.routeDone
-            r.lineWidth = 6
+            r.lineWidth = 10
         default:
             r.strokeColor = theme.routeAhead
             r.lineWidth = 4
@@ -271,13 +288,9 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         let theme = self.theme
         switch annotation {
         case is RunnerAnnotation:
-            view.image = Self.image(size: 44) { ctx, r in
-                Draw.radialGlow(ctx, center: CGPoint(x: r.midX, y: r.midY), radius: 22, color: theme.routeDone.withAlphaComponent(0.6))
-                ctx.setFillColor(NSColor.white.cgColor)
-                ctx.fillEllipse(in: r.insetBy(dx: 14, dy: 14))
-                ctx.setStrokeColor(theme.routeDone.cgColor)
-                ctx.setLineWidth(3)
-                ctx.strokeEllipse(in: r.insetBy(dx: 14, dy: 14))
+            view.image = Self.image(size: 56) { ctx, r in
+                Draw.radialGlow(ctx, center: CGPoint(x: r.midX, y: r.midY), radius: 28, color: theme.runner.withAlphaComponent(0.45))
+                Theme.drawPin(ctx, at: CGPoint(x: r.midX, y: r.midY), radius: 15, color: theme.runner)
             }
             view.zPriority = .max
         case let st as StationAnnotation:

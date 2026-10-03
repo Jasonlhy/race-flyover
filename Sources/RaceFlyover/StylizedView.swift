@@ -126,6 +126,10 @@ final class StylizedView: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
+        FrameStats.shared.measure("sceneDraw") { drawScene() }
+    }
+
+    private func drawScene() {
         guard let engine, let ctx = NSGraphicsContext.current?.cgContext else { return }
         let size = bounds.size
         let course = engine.course
@@ -193,9 +197,10 @@ final class StylizedView: NSView {
         proj.addPolyline(to: done, count: runnerIndex + 2) { k in
             k <= runnerIndex ? self.points[k] : runnerPoint
         }
-        stroke(ctx, done, theme.glow, 16 * s)
-        stroke(ctx, done, theme.glow, 8 * s)
-        stroke(ctx, done, theme.routeDone, 4 * s)
+        // Covered route: a thick trail that ends exactly at the pin.
+        stroke(ctx, done, theme.glow, 22 * s)
+        stroke(ctx, done, NSColor.black.withAlphaComponent(tileMode ? 0.35 : 0.2), 10 * s)
+        stroke(ctx, done, theme.routeDone, 7 * s)
 
         drawFog(ctx, size: size, proj: proj)
 
@@ -430,20 +435,14 @@ final class StylizedView: NSView {
         if let (top, _) = proj.project(p + SIMD3(0, 0, D * 0.1)) {
             Draw.linearGradient(ctx, rect: CGRect(x: base.x - 1.5 * s, y: min(top.y, base.y), width: 3 * s,
                                                   height: abs(base.y - top.y)),
-                                from: theme.runner.withAlphaComponent(0), to: theme.runner.withAlphaComponent(0.8),
+                                from: theme.runner.withAlphaComponent(0), to: theme.runner.withAlphaComponent(0.7),
                                 start: top, end: base)
         }
         let pulse = CGFloat((time * 0.9).truncatingRemainder(dividingBy: 1))
-        let ring = (10 + 26 * pulse) * s
-        ctx.setStrokeColor(theme.routeDone.withAlphaComponent(0.7 * (1 - pulse)).cgColor)
-        ctx.setLineWidth(2 * s)
+        let ring = (16 + 30 * pulse) * s
+        ctx.setStrokeColor(theme.runner.withAlphaComponent(0.75 * (1 - pulse)).cgColor)
+        ctx.setLineWidth(2.5 * s)
         ctx.strokeEllipse(in: CGRect(x: base.x - ring, y: base.y - ring * 0.6, width: ring * 2, height: ring * 1.2))
-        Draw.radialGlow(ctx, center: base, radius: 26 * s, color: theme.routeDone.withAlphaComponent(0.45))
-        let r = 6.5 * s
-        ctx.setFillColor(theme.runner.cgColor)
-        ctx.fillEllipse(in: CGRect(x: base.x - r, y: base.y - r, width: r * 2, height: r * 2))
-        ctx.setStrokeColor(theme.routeDone.cgColor)
-        ctx.setLineWidth(2.2 * s)
-        ctx.strokeEllipse(in: CGRect(x: base.x - r, y: base.y - r, width: r * 2, height: r * 2))
+        Theme.drawPin(ctx, at: base, radius: 15 * s, color: theme.runner)
     }
 }

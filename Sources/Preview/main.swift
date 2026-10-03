@@ -30,6 +30,10 @@ func applyOverrides(_ view: RaceFlyoverView) {
         if let v = option("--lap").flatMap(Double.init) { c.lapMinutes = v }
         if let v = option("--font").flatMap(Typeface.init) { c.typeface = v }
         if let v = option("--panels").flatMap(PanelStyle.init) { c.panels = v }
+        if let v = option("--pin").flatMap(AccentColor.init) { c.pinColor = v }
+        if let v = option("--map3d") { c.map3D = v != "off" }
+        if let v = option("--fps").flatMap(Int.init) { c.smooth60 = v >= 60 }
+        if let v = option("--trail").flatMap(AccentColor.init) { c.trailColor = v }
         if let v = option("--text-scale").flatMap(Double.init) { c.textScale = v }
     }
 }
@@ -118,6 +122,27 @@ func snapshotTiles(view: RaceFlyoverView, size: NSSize, output: String) {
     try! rep.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: output))
     print("map snapshots: loaded \(AppleMapTiles.shared.loadedCount), failed \(AppleMapTiles.shared.failedCount), pending \(AppleMapTiles.shared.pendingCount)")
     print("wrote \(output) (tiles loaded: \(AppleMapTiles.shared.loadedCount))")
+}
+
+if arguments.contains("--sync-test") {
+    // Two "screens" showing the same course should stay in lockstep.
+    var views: [RaceFlyoverView] = []
+    for i in 0..<2 {
+        let w = NSWindow(contentRect: NSRect(x: 60 + i * 700, y: 60, width: 640, height: 360), styleMask: [.titled],
+                         backing: .buffered, defer: false)
+        let v = RaceFlyoverView(frame: w.contentView!.bounds, isPreview: false)!
+        v.override { $0.displays = arguments.contains("--different") ? .different : .same; $0.style = .midnight; $0.selection = "all" }
+        w.contentView = v
+        w.orderFrontRegardless()
+        v.startAnimation()
+        views.append(v)
+    }
+    for _ in 0..<660 { views.forEach { $0.animateOneFrame() }; RunLoop.current.run(until: Date().addingTimeInterval(1.0 / 60)) }
+    for (i, v) in views.enumerated() {
+        let e = v.engine!
+        print("screen \(i + 1): \(e.course.name) phase=\(e.phase) km=\(String(format: "%.3f", e.course.officialKm(at: e.distance)))")
+    }
+    exit(0)
 }
 
 if arguments.contains("--list") {

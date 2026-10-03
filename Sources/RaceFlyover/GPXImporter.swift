@@ -79,7 +79,7 @@ enum GPXImporter {
     private static let fuelWords = ["gel", "maurten", "gu ", "shot", "banana", "food", "bread", "candy",
                                     "chocolate", "orange", "fruit", "energy", "fuel", "carb"]
     private static let fluidWords = ["water", "gatorade", "drink", "electrolyte", "fluid", "refreshment",
-                                     "isotonic", "sports", "aid", "sponge", "hydration", "food"]
+                                     "isotonic", "sports drink", "aid", "sponge", "hydration", "food"]
 
     static func classify(name: String, desc: String) -> (fluid: Bool, fuel: Bool, label: String)? {
         let text = " \(name) \(desc) ".lowercased()

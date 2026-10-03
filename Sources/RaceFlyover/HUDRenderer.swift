@@ -12,6 +12,19 @@ final class GlassPanelLayout {
     var panels: [GlassPanel] = []
 }
 
+/// Independently drawn regions of the HUD. Each is rendered into its own small
+/// layer, so a frame only repaints the panels that change instead of a
+/// screen-sized transparent layer.
+enum HUDPart: CaseIterable {
+    case title, metrics, profile, minimal, card
+}
+
+/// Records where each part drew this frame (in HUD coordinates).
+final class HUDFrames {
+    var rects: [HUDPart: CGRect] = [:]
+    func add(_ part: HUDPart, _ r: CGRect) { rects[part] = rects[part].map { $0.union(r) } ?? r }
+}
+
 /// Draws the 2D overlay: course title, live distance and elevation, the next
 /// fluid and fuel stations, an elevation profile strip, and the intro/finish
 /// cards. With `glass` set, panel backgrounds are left to real Liquid Glass
@@ -24,6 +37,11 @@ struct HUDRenderer {
     var glass: GlassPanelLayout?
     /// Neighbourhood names for the caption under the minimap.
     var area: AreaNamer?
+    /// Which parts to draw (all by default) and where they ended up.
+    var parts: Set<HUDPart> = Set(HUDPart.allCases)
+    var frames: HUDFrames?
+    /// The cross-fade to black between courses (the live overlay uses a layer instead).
+    var drawsFade = true
 
     private var s: CGFloat { max(0.3, min(size.width / 1.6, size.height) / 1000) * CGFloat(engine.config.textScale) }
     private var margin: CGFloat { 44 * s }
@@ -35,17 +53,20 @@ struct HUDRenderer {
             ctx.saveGState()
             ctx.setAlpha(a)
             if mode == .full {
-                drawTitle(ctx)
-                drawMetrics(ctx)
-                drawProfile(ctx)
-            } else {
+                if parts.contains(.title) { drawTitle(ctx) }
+                if parts.contains(.metrics) { drawMetrics(ctx) }
+                if parts.contains(.profile) { drawProfile(ctx) }
+            } else if parts.contains(.minimal) {
                 drawMinimal(ctx)
+                frames?.add(.minimal, CGRect(origin: .zero, size: size))
             }
             ctx.restoreGState()
         }
-        if engine.titleAlpha > 0.01 { drawTitleCard(ctx, alpha: CGFloat(engine.titleAlpha)) }
-        if engine.finishAlpha > 0.01 { drawFinishCard(ctx, alpha: CGFloat(engine.finishAlpha)) }
-        if engine.fade > 0.001 {
+        if parts.contains(.card) {
+            if engine.titleAlpha > 0.01 { drawTitleCard(ctx, alpha: CGFloat(engine.titleAlpha)) }
+            if engine.finishAlpha > 0.01 { drawFinishCard(ctx, alpha: CGFloat(engine.finishAlpha)) }
+        }
+        if drawsFade && engine.fade > 0.001 {
             ctx.setFillColor(NSColor.black.withAlphaComponent(CGFloat(engine.fade)).cgColor)
             ctx.fill(CGRect(origin: .zero, size: size))
         }
@@ -55,7 +76,8 @@ struct HUDRenderer {
     private var units: Units { engine.config.units }
     private var currentKm: Double { course.officialKm(at: engine.distance) }
 
-    private func panel(_ ctx: CGContext, _ r: CGRect) {
+    private func panel(_ ctx: CGContext, _ r: CGRect, _ part: HUDPart) {
+        frames?.add(part, r)
         if let glass {
             glass.panels.append(GlassPanel(rect: r, radius: 18 * s, alpha: CGFloat(engine.hudAlpha)))
         } else {
@@ -130,7 +152,7 @@ struct HUDRenderer {
         let (tops, height) = stack(lines, gaps: gaps)
         let width = lines.map(\.width).max() ?? 0
         let box = CGRect(x: margin, y: margin, width: width + inset * 2, height: height + inset * 2)
-        panel(ctx, box)
+        panel(ctx, box, .title)
         for (l, top) in zip(lines, tops) {
             l.text.draw(at: CGPoint(x: box.minX + inset, y: box.minY + inset + top))
         }
@@ -186,7 +208,7 @@ struct HUDRenderer {
 
         let box = CGRect(x: size.width - margin - width - inset * 2, y: margin, width: width + inset * 2,
                          height: bottom + inset * 2)
-        panel(ctx, box)
+        panel(ctx, box, .metrics)
         let left = box.minX + inset, right = box.maxX - inset, top = box.minY + inset
         drawMinimap(ctx, in: CGRect(origin: CGPoint(x: left, y: top), size: mapSize))
         drawAreaCaption(ctx, caption, at: CGPoint(x: left, y: top + captionTop))
@@ -254,7 +276,7 @@ struct HUDRenderer {
             done.addLines(between: stride(from: 0, through: ri, by: step).map { pt(c.x[$0], c.y[$0]) } + [pt(runner.x, runner.y)])
             ctx.addPath(done)
             ctx.setStrokeColor(theme.routeDone.cgColor)
-            ctx.setLineWidth(2.4 * s)
+            ctx.setLineWidth(3.4 * s)
             ctx.strokePath()
         }
         // Start (ring) and finish (filled square).
@@ -268,12 +290,7 @@ struct HUDRenderer {
         let p = pt(runner.x, runner.y)
         let pulse = CGFloat((engine.time * 0.9).truncatingRemainder(dividingBy: 1))
         Draw.radialGlow(ctx, center: p, radius: (7 + 6 * pulse) * s, color: theme.routeDone.withAlphaComponent(0.55 * (1 - pulse)))
-        let r = 3.6 * s
-        ctx.setFillColor(theme.runner.cgColor)
-        ctx.fillEllipse(in: CGRect(x: p.x - r, y: p.y - r, width: r * 2, height: r * 2))
-        ctx.setStrokeColor(theme.routeDone.cgColor)
-        ctx.setLineWidth(1.6 * s)
-        ctx.strokeEllipse(in: CGRect(x: p.x - r, y: p.y - r, width: r * 2, height: r * 2))
+        Theme.drawPin(ctx, at: p, radius: 5.5 * s, color: theme.runner)
         ctx.restoreGState()
     }
 
@@ -331,7 +348,7 @@ struct HUDRenderer {
         let layout = profileLayout
         let boxH = layout.height + inset * 2
         let box = CGRect(x: margin, y: size.height - margin - boxH, width: size.width - margin * 2, height: boxH)
-        panel(ctx, box)
+        panel(ctx, box, .profile)
         let top = box.minY + inset
         let topLabel = tickLabel(units.formatElevation(course.maxEle))
         let bottomLabel = tickLabel(units.formatElevation(course.minEle))
@@ -421,12 +438,7 @@ struct HUDRenderer {
         let cy = pt(min(prof.count - 1, Int(frac * CGFloat(prof.count - 1)))).y
         ctx.setFillColor(theme.text.withAlphaComponent(0.7).cgColor)
         ctx.fill(CGRect(x: cursorX - 0.75 * s, y: plot.minY, width: 1.5 * s, height: plot.height))
-        let r = 5 * s
-        ctx.setFillColor(theme.runner.cgColor)
-        ctx.fillEllipse(in: CGRect(x: cursorX - r, y: cy - r, width: r * 2, height: r * 2))
-        ctx.setStrokeColor(theme.routeDone.cgColor)
-        ctx.setLineWidth(2 * s)
-        ctx.strokeEllipse(in: CGRect(x: cursorX - r, y: cy - r, width: r * 2, height: r * 2))
+        Theme.drawPin(ctx, at: CGPoint(x: cursorX, y: cy), radius: 6.5 * s, color: theme.runner)
 
         // Legend
         let legend = NSMutableAttributedString()
@@ -471,13 +483,16 @@ struct HUDRenderer {
                                   alpha: CGFloat) {
         let height = lines.reduce(0) { $0 + $1.0.size().height + $1.1 }
         let top = bottom - height
+        let width = lines.map { $0.0.size().width }.max() ?? 0
+        let card = CGRect(x: (size.width - width) / 2 - 44 * s, y: top - 26 * s,
+                          width: width + 88 * s, height: height + 48 * s)
         if let glass {
-            let width = lines.map { $0.0.size().width }.max() ?? 0
-            let card = CGRect(x: (size.width - width) / 2 - 44 * s, y: top - 26 * s,
-                              width: width + 88 * s, height: height + 48 * s)
             glass.panels.append(GlassPanel(rect: card, radius: 30 * s, alpha: alpha))
+            frames?.add(.card, card)
         } else {
-            scrim(ctx, from: top - 70 * s, to: min(size.height, bottom + 70 * s))
+            let band = CGRect(x: 0, y: top - 70 * s, width: size.width, height: min(size.height, bottom + 70 * s) - (top - 70 * s))
+            scrim(ctx, from: band.minY, to: band.maxY)
+            frames?.add(.card, band)
         }
         var y = top
         for (line, gap) in lines {
