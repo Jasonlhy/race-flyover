@@ -15,9 +15,10 @@ import UniformTypeIdentifiers
 //   --sync-test                    two views side by side (multi-screen behaviour)
 // Options for pictures and the live window:
 //   --course berlin  --style midnight|neon|daylight|blueprint|mono|satellite|satellitePlain|map|mapLight
-//   --progress 0.4  --advance 0.5 (play on for N seconds)  --phase intro|finish --time 3
+//   --progress 0.4  --advance 0.5 (play on for N seconds; --trace prints the runner and camera)  --phase intro|finish --time 3
 //   --tilt 60  --zoom 0.4  --camera chase|northUp|overview  --lap 15 (minutes)
 //   --hud full|minimal|off  --units km|mi  --font avenir  --text-scale 1.2  --panels glass
+//   --slow off|landmarks|stations|everything
 //   --pin blue  --trail purple  --map3d on|off  --fps 30|60  --size 1920x1080  --thumbnail
 
 let arguments = CommandLine.arguments
@@ -45,6 +46,7 @@ func applyOverrides(_ view: RaceFlyoverView) {
         if let v = option("--pin-size").flatMap(PinSize.init) { c.pinSize = v }
         if let v = option("--pin-style").flatMap(PinStyle.init) { c.pinStyle = v }
         if let v = option("--path").flatMap(PathWidth.init) { c.pathWidth = v }
+        if let v = option("--slow").flatMap(SlowDown.init) { c.slowDown = v }
         if let v = option("--fps").flatMap(Int.init) { c.smooth60 = v >= 60 }
         if let v = option("--trail").flatMap(AccentColor.init) { c.trailColor = v }
         if let v = option("--text-scale").flatMap(Double.init) { c.textScale = v }
@@ -249,7 +251,14 @@ if let output = option("--snapshot") {
         engine.seek(fraction: option("--progress").flatMap(Double.init) ?? 0.3)
         // Play forward a little (e.g. to catch a pulse as a station is passed).
         if let seconds = option("--advance").flatMap(Double.init) {
-            for _ in 0..<Int(seconds * 30) { engine.step(1.0 / 30) }
+            for i in 0..<Int(seconds * 30) {
+                engine.step(1.0 / 30)
+                if arguments.contains("--trace"), i % 15 == 0 {
+                    print(String(format: "t=%.1fs km=%.3f camera=%.0fm tilt=%.0f° visiting=%@", Double(i) / 30,
+                                 engine.course.officialKm(at: engine.distance), engine.camera.distance,
+                                 engine.camera.tilt * 180 / .pi, engine.visit.map { "\($0.stop.kind)" } ?? "-"))
+                }
+            }
         }
         // Give the neighbourhood lookup a moment, as it would have during playback.
         let deadline = Date().addingTimeInterval(4)

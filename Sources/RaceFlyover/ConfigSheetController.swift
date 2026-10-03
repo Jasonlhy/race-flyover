@@ -27,6 +27,7 @@ final class ConfigSheetController: NSObject {
     private let exaggerationLabel = NSTextField(labelWithString: "")
     private let unitsControl = NSSegmentedControl()
     private let hudPopup = NSPopUpButton()
+    private let slowDownPopup = NSPopUpButton()
     private let fontPopup = NSPopUpButton()
     private let panelPopup = NSPopUpButton()
     private let sizeControl = NSSegmentedControl()
@@ -139,6 +140,8 @@ final class ConfigSheetController: NSObject {
                 ], footer: note("The pin sends out a ring as it passes a station, a distance marker or halfway.")),
                 section(nil, rows: [row("Landmarks", control: landmarksCheck)],
                         footer: note("Famous sights near the route, found with Apple Maps. The caption under the minimap names them as you pass.")),
+                section(nil, rows: [row("Slow down at", control: slowDownPopup)],
+                        footer: note("The runner eases almost to a stop and the camera frames the spot: it pulls back for big sights like parks, palaces and bridges, and moves in for statues, stations and markers.")),
             ]),
             Page(title: "Performance", symbol: "gauge.with.dots.needle.67percent", tint: .systemGreen, sections: [
                 section(nil, rows: [
@@ -341,7 +344,7 @@ final class ConfigSheetController: NSObject {
     }
 
     private func configureControls() {
-        for control in [pinStylePopup, pinSizeControl, pathWidthControl, stylePopup, hudPopup, fontPopup, panelPopup, frameRatePopup, displaysPopup,
+        for control in [slowDownPopup, pinStylePopup, pinSizeControl, pathWidthControl, stylePopup, hudPopup, fontPopup, panelPopup, frameRatePopup, displaysPopup,
                         pinPopup, trailPopup] as [NSControl] {
             control.target = self
             control.action = #selector(changed)
@@ -439,6 +442,11 @@ final class ConfigSheetController: NSObject {
         sizeControl.trackingMode = .selectOne
         sizeControl.target = self
         sizeControl.action = #selector(changed)
+        slowDownPopup.removeAllItems()
+        for mode in SlowDown.allCases {
+            slowDownPopup.addItem(withTitle: mode.title)
+            slowDownPopup.lastItem?.representedObject = mode.rawValue
+        }
         hudPopup.removeAllItems()
         for mode in HUDMode.allCases {
             hudPopup.addItem(withTitle: mode.title)
@@ -535,6 +543,7 @@ final class ConfigSheetController: NSObject {
         exaggerationSlider.doubleValue = config.exaggeration
         unitsControl.selectedSegment = config.units == .km ? 0 : 1
         hudPopup.selectItem(at: HUDMode.allCases.firstIndex(of: config.hud) ?? 0)
+        slowDownPopup.selectItem(at: SlowDown.allCases.firstIndex(of: config.slowDown) ?? 1)
         fontPopup.selectItem(at: Typeface.allCases.firstIndex(of: config.typeface) ?? 0)
         panelPopup.selectItem(at: PanelStyle.allCases.firstIndex(of: config.panels) ?? 0)
         sizeControl.selectedSegment = Self.textScales.enumerated().min { abs($0.1 - config.textScale) < abs($1.1 - config.textScale) }!.0
@@ -618,6 +627,7 @@ final class ConfigSheetController: NSObject {
         config.exaggeration = exaggerationSlider.doubleValue.rounded()
         config.units = unitsControl.selectedSegment == 1 ? .mi : .km
         config.hud = HUDMode(rawValue: hudPopup.selectedItem?.representedObject as? String ?? "") ?? .full
+        config.slowDown = SlowDown(rawValue: slowDownPopup.selectedItem?.representedObject as? String ?? "") ?? .landmarks
         config.typeface = Typeface(rawValue: fontPopup.selectedItem?.representedObject as? String ?? "") ?? .system
         config.panels = PanelStyle(rawValue: panelPopup.selectedItem?.representedObject as? String ?? "") ?? .solid
         config.textScale = Self.textScales[max(0, sizeControl.selectedSegment)]

@@ -28,6 +28,31 @@ final class FlyoverEngine {
     static let burstDuration = 1.6
     private(set) var bursts: [Burst] = []
 
+    /// A place where the runner slows down and the camera frames the view.
+    struct Stop {
+        enum Kind { case landmark, station, marker }
+        let kind: Kind
+        /// Traced metres along the course.
+        let d: Double
+        /// Where a landmark actually is (course x/y), which may be off the road.
+        let focus: SIMD2<Double>?
+        /// Rough size of what's there, in metres.
+        let radius: Double
+
+        var hold: Double { kind == .landmark ? 5.5 : (kind == .station ? 2.6 : 2.0) }
+        var slowest: Double { kind == .landmark ? 0.04 : (kind == .station ? 0.12 : 0.16) }
+    }
+
+    /// The stop being visited and when the visit began.
+    struct Visit {
+        let stop: Stop
+        let start: Double
+    }
+    private(set) var visit: Visit?
+    private var stops: [Stop] = []
+    private var stopsKey = ""
+    static let slowIn = 1.8, slowOut = 1.8, settle = 1.6
+
     static let introDuration = 7.0
     static let finishDuration = 7.0
     static let fadeDuration = 1.2
@@ -74,6 +99,7 @@ final class FlyoverEngine {
     }
 
     private func beginCourse() {
+        visit = nil
         distance = 0
         phase = .intro
         phaseTime = 0
@@ -85,6 +111,7 @@ final class FlyoverEngine {
     /// Jumps straight into the run at `fraction` of the course (for previews).
     func seek(fraction: Double) {
         distance = min(max(fraction, 0), 1) * course.length
+        visit = nil
         phase = .running
         phaseTime = 0
         builtUp = course.density(atKm: course.officialKm(at: distance)) ?? 0
@@ -103,6 +130,7 @@ final class FlyoverEngine {
         distance = other.distance
         heading = other.heading
         builtUp = other.builtUp
+        visit = other.visit
         updateCamera()
     }
 
@@ -110,11 +138,13 @@ final class FlyoverEngine {
     func jump(by metres: Double) {
         if phase != .running { phase = .running; phaseTime = 0 }
         distance = min(max(distance + metres, 0), course.length - 1)
+        visit = nil
     }
 
     /// Shows the intro/finish sequences at a given moment (preview snapshots).
     func show(phase newPhase: Phase, at t: Double) {
         if newPhase == .finish { distance = course.length }
+        visit = nil
         phase = newPhase
         phaseTime = t
         updateCamera()
@@ -135,7 +165,8 @@ final class FlyoverEngine {
         case .intro:
             if phaseTime >= Self.introDuration { phase = .running; phaseTime = 0 }
         case .running:
-            moved = metresPerSecond * dt
+            updateVisit()
+            moved = metresPerSecond * speedFactor * dt
             let before = distance
             distance += moved
             detectBursts(from: before, to: min(distance, course.length))
@@ -175,6 +206,96 @@ final class FlyoverEngine {
         }
     }
 
+    // MARK: - Slowing down at stops
+
+    /// The stops for the current course and options (landmarks arrive from
+    /// Apple Maps a little after a course starts, so this is refreshed as they do).
+    private func refreshStops() {
+        let mode = config.slowDown
+        let landmarks = mode.landmarks ? LandmarkStore.shared.landmarks(for: course) : []
+        let key = "\(course.id)|\(mode)|\(landmarks.count)|\(config.showFluid)|\(config.showFuel)|\(config.units)"
+        guard key != stopsKey else { return }
+        stopsKey = key
+        var list: [Stop] = landmarks.map { l in
+            let p = course.local(lat: l.lat, lon: l.lon)
+            return Stop(kind: .landmark, d: course.along(officialKm: l.km), focus: SIMD2(p.x, p.y), radius: l.estimatedRadius)
+        }
+        if mode.stations {
+            for st in course.data.stations where (st.fluid && config.showFluid) || (st.fuel && config.showFuel) {
+                list.append(Stop(kind: .station, d: course.along(officialKm: st.km), focus: nil, radius: 40))
+            }
+        }
+        if mode.markers {
+            let unit = config.units.kmPerUnit
+            var k = 5.0
+            while k * unit < course.data.distanceKm - 0.3 {
+                list.append(Stop(kind: .marker, d: course.along(officialKm: k * unit), focus: nil, radius: 40))
+                k += 5
+            }
+            if course.data.distanceKm > 40 {
+                list.append(Stop(kind: .marker, d: course.length / 2, focus: nil, radius: 40))
+            }
+        }
+        stops = list.sorted { $0.d < $1.d }
+    }
+
+    /// Ends a finished visit and starts the next one early enough that the
+    /// runner reaches the stop in the middle of the slow part.
+    private func updateVisit() {
+        if let v = visit, time - v.start > Self.slowIn + v.stop.hold + Self.slowOut + Self.settle { visit = nil }
+        guard visit == nil, config.slowDown != .off, config.camera != .overview else { return }
+        refreshStops()
+        let v = metresPerSecond
+        guard let next = stops.first(where: { $0.d > distance }) else { return }
+        let lead = v * Self.slowIn * (1 + next.slowest) / 2 + v * next.slowest * next.hold / 2
+        if distance >= next.d - lead { visit = Visit(stop: next, start: time) }
+    }
+
+    /// Fraction of normal speed: eases down to a crawl, holds, eases back.
+    private var speedFactor: Double {
+        guard let v = visit else { return 1 }
+        let t = time - v.start, m = v.stop.slowest, hold = v.stop.hold
+        if t < Self.slowIn { return 1 - (1 - m) * smoothstep(t / Self.slowIn) }
+        if t < Self.slowIn + hold { return m }
+        return m + (1 - m) * smoothstep((t - Self.slowIn - hold) / Self.slowOut)
+    }
+
+    /// How far the camera has moved to frame the stop (0 normal … 1 framed).
+    private var visitWeight: Double {
+        guard let v = visit else { return 0 }
+        let t = time - v.start
+        return smoothstep(t / (Self.slowIn + 0.8))
+            * (1 - smoothstep((t - Self.slowIn - v.stop.hold) / (Self.slowOut + Self.settle)))
+    }
+
+    /// The chase camera moved to show the stop: pulled back to fit a landmark
+    /// and the runner together (further for big ones), with a slow sweep around
+    /// it; closer in for stations and markers.
+    private func framed(_ cam: CameraState, stop: Stop, since start: Double) -> CameraState {
+        var out = cam
+        let runner = SIMD2(cam.target.x, cam.target.y)
+        switch stop.kind {
+        case .landmark:
+            let focus = stop.focus ?? runner
+            let gap = simd_length(focus - runner)
+            let centre = runner + (focus - runner) * 0.55
+            let span = max(stop.radius * 2.6, gap * 1.3 + stop.radius * 1.4, 180)
+            let fit = span / 2 / tan(Self.fieldOfView / 2) * 1.15
+            out.target = SIMD3(centre.x, centre.y, cam.target.z)
+            let c = course.coordinate(x: centre.x, y: centre.y)
+            out.coordinate = CLLocationCoordinate2D(latitude: c.lat, longitude: c.lon)
+            out.distance = min(max(fit, 220), 4000)
+            out.tilt = 52 * .pi / 180
+            let total = Self.slowIn + stop.hold + Self.slowOut
+            out.heading = wrapAngle(cam.heading + 0.45 * ((time - start) / total - 0.5))
+        case .station:
+            out.distance = cam.distance * 0.55
+        case .marker:
+            out.distance = cam.distance * 0.65
+        }
+        return out
+    }
+
     private func updateHeading(dt: Double, moved: Double) {
         guard config.camera != .northUp else { heading = 0; return }
         let target = course.heading(at: distance)
@@ -200,8 +321,10 @@ final class FlyoverEngine {
             tilt = max(min(tilt, 20), tilt - 30 * builtUp)
             distance *= 1 + 0.35 * builtUp
         }
-        return CameraState(target: SIMD3(s.x, s.y, s.ele), coordinate: s.coordinate, heading: heading,
-                           tilt: tilt * .pi / 180, distance: distance)
+        let cam = CameraState(target: SIMD3(s.x, s.y, s.ele), coordinate: s.coordinate, heading: heading,
+                              tilt: tilt * .pi / 180, distance: distance)
+        guard let v = visit, case let w = visitWeight, w > 0 else { return cam }
+        return blend(cam, framed(cam, stop: v.stop, since: v.start), w)
     }
 
     private func overviewCamera(rotating: Bool) -> CameraState {

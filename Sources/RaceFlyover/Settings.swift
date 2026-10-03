@@ -81,6 +81,24 @@ enum PinSize: String, CaseIterable {
     }
 }
 
+/// Where the runner slows down so the camera can frame what's there.
+enum SlowDown: String, CaseIterable {
+    case off, landmarks, stations, everything
+
+    var title: String {
+        switch self {
+        case .off: return "Nowhere"
+        case .landmarks: return "Landmarks"
+        case .stations: return "Landmarks & stations"
+        case .everything: return "Landmarks, stations & markers"
+        }
+    }
+
+    var landmarks: Bool { self != .off }
+    var stations: Bool { self == .stations || self == .everything }
+    var markers: Bool { self == .everything }
+}
+
 enum PathWidth: String, CaseIterable {
     case thin, regular, thick, extraThick
 
@@ -220,6 +238,7 @@ struct Config: Equatable {
     var map3D = true                  // realistic 3D terrain and buildings in Apple Maps styles
     var showBursts = true             // ring pulse when passing stations and markers
     var showLandmarks = true
+    var slowDown = SlowDown.landmarks
     var pinSize = PinSize.large
     var pathWidth = PathWidth.regular
     var pinStyle = PinStyle.glass
@@ -268,6 +287,7 @@ final class Settings {
             if let v = d.string(forKey: "pinColor").flatMap(AccentColor.init) { c.pinColor = v }
             if let v = d.string(forKey: "pinSize").flatMap(PinSize.init) { c.pinSize = v }
             if let v = d.string(forKey: "pathWidth").flatMap(PathWidth.init) { c.pathWidth = v }
+            if let v = d.string(forKey: "slowDown").flatMap(SlowDown.init) { c.slowDown = v }
             if let v = d.string(forKey: "pinStyle").flatMap(PinStyle.init) { c.pinStyle = v }
             if let v = d.string(forKey: "trailColor").flatMap(AccentColor.init) { c.trailColor = v }
             if d.object(forKey: "textScale") != nil { c.textScale = min(max(d.double(forKey: "textScale"), 0.6), 1.6) }
@@ -298,6 +318,7 @@ final class Settings {
             d.set(newValue.pinColor.rawValue, forKey: "pinColor")
             d.set(newValue.pinSize.rawValue, forKey: "pinSize")
             d.set(newValue.pathWidth.rawValue, forKey: "pathWidth")
+            d.set(newValue.slowDown.rawValue, forKey: "slowDown")
             d.set(newValue.pinStyle.rawValue, forKey: "pinStyle")
             d.set(newValue.trailColor.rawValue, forKey: "trailColor")
             d.set(newValue.textScale, forKey: "textScale")

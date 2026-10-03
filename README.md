@@ -45,6 +45,10 @@ minimap of the whole course, and the elevation profile along the bottom.*
   pass a station, a marker or halfway. Choose its size and colour.
 - **The route ahead and behind**: the part you've covered is drawn in your trail colour, the part
   still to run in a lighter, see-through shade.
+- **Slow down at highlights**: the runner eases almost to a stop at landmarks (and, if you like,
+  at stations and distance markers) while the camera frames the view. It pulls back for big sights
+  such as parks, palaces and bridges, moves in close for statues, and sweeps slowly around so you
+  get a proper look before the run picks up again.
 - **Automatic tilt**: the camera looks down more steeply where the streets are packed with
   buildings, so they don't hide the route, and flies lower over parks, rivers and open roads.
 - **A title card** at the start of each course and a **finish card** at the end, placed low on the
@@ -63,7 +67,7 @@ settings are grouped like the rest of System Settings:
 | **Camera** | Follow behind the runner, keep north at the top, or watch the whole course from above with a slow orbit. Adjust how steeply the camera looks down and how close it sits, or let it adjust the tilt automatically to how built-up each area is. |
 | **Appearance** | Fly over Apple Maps (satellite or street map, with optional 3D buildings), or one of five drawn looks: Midnight, Neon Grid, Daylight, Blueprint and Minimal Mono. Choose the pin's style (glass or solid), size and colour, and the trail's colour and thickness. |
 | **Overlay** | Show all the information panels, just the essentials, or nothing. Solid panels or Apple's Liquid Glass, light or dark to match the look you picked rather than your Mac's appearance. Kilometres or miles. Pick a typeface and text size. |
-| **On the Route** | Turn water stations, fuel stations, distance markers, the passing pulse and landmarks on or off. |
+| **On the Route** | Turn water stations, fuel stations, distance markers, the passing pulse and landmarks on or off. Choose where the runner slows down for a closer look: nowhere, landmarks, landmarks and stations, or all of those plus distance markers. |
 | **Performance** | Choose what happens on multiple screens and set the frame rate. |
 
 ## What you need

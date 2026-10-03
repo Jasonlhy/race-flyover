@@ -8,6 +8,18 @@ struct Landmark: Codable, Equatable {
     var lon: Double
     /// Official race kilometre of the closest point on the route.
     var km: Double
+
+    /// Rough radius in metres, guessed from the name (Apple Maps doesn't give a
+    /// landmark's size): parks and palaces are big, statues small.
+    var estimatedRadius: Double {
+        let n = name.lowercased()
+        let words = n.split(whereSeparator: { !$0.isLetter }).map(String.init)
+        func has(_ list: [String]) -> Bool { list.contains { k in words.contains(k) || (k.count > 5 && n.contains(k)) } }
+        if has(["park", "garden", "gardens", "palace", "castle", "stadium", "bridge", "lake", "river", "common",
+                "harbour", "harbor", "square", "plaza", "zoo", "university", "campus", "cemetery", "forest", "circuit"]) { return 320 }
+        if has(["statue", "monument", "column", "fountain", "arch", "memorial", "obelisk", "clock", "sculpture", "bell"]) { return 45 }
+        return 120
+    }
 }
 
 /// Finds famous landmarks along a course with Apple Maps.

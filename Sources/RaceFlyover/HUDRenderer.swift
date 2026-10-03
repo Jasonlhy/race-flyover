@@ -297,7 +297,8 @@ struct HUDRenderer {
     private func areaCaption(maxWidth: CGFloat) -> Line {
         // While passing a landmark, name it instead of the neighbourhood.
         let passing = engine.config.showLandmarks
-            ? LandmarkStore.shared.landmarks(for: course).first { abs($0.km - currentKm) < 0.3 }
+            ? LandmarkStore.shared.landmarks(for: course).filter { abs($0.km - currentKm) < 0.3 }
+                .min { abs($0.km - currentKm) < abs($1.km - currentKm) }
             : nil
         let text = passing?.name ?? area?.name ?? course.data.city.components(separatedBy: ",").first ?? ""
         let pin = passing != nil
