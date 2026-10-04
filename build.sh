@@ -52,6 +52,8 @@ compile "$SAVER/Contents/MacOS/RaceFlyover" RaceFlyover -parse-as-library -Xlink
 cp Resources/Info.plist "$SAVER/Contents/Info.plist"
 stamp_version "$SAVER/Contents/Info.plist"
 copy_courses "$SAVER/Contents/Resources"
+# Thumbnail shown in System Settings › Screen Saver.
+cp Resources/thumbnail.png Resources/thumbnail@2x.png "$SAVER/Contents/Resources/"
 codesign --force --sign - "$SAVER" 2>/dev/null
 
 echo "› Building preview app"
