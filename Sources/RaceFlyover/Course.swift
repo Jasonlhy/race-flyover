@@ -27,6 +27,8 @@ struct CourseData: Codable {
     /// How built-up the route is (0 open … 1 dense) every `densityStepKm`, for automatic tilt.
     var density: [Double]?
     var densityStepKm: Double?
+    /// Underground stretches as `[start, end]` official km, drawn dashed.
+    var tunnels: [[Double]]?
     var stations: [Station]
     /// `[latitude, longitude, elevation metres]`, evenly spaced along the route.
     var points: [[Double]]

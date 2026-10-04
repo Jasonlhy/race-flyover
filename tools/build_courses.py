@@ -88,7 +88,9 @@ COURSES = [
      "city": "Tsim Sha Tsui → Victoria Park, Hong Kong", "month": "January",
      # The source heights follow the sea under Stonecutters Bridge (deck ~73 m)
      # and over the Western Harbour Crossing (tunnel ~25 m below sea level).
-     "bridges": [(9.45, 11.95, 73), (33.7, 35.45, -25)]},
+     "bridges": [(9.45, 11.95, 73), (33.7, 35.45, -25)],
+     # (source km start, source km end) of underground stretches, drawn dashed.
+     "tunnels": [(33.7, 35.45)]},
     {"id": "kyoto", "landmarks": ['Togetsukyo Bridge', 'Ninna-ji', 'Ryoan-ji', 'Kamigamo Shrine', 'Kyoto Botanical Gardens', 'Kyoto City Hall', 'Heian Shrine'], "country": "JP", "name": "Kyoto Marathon",
      "file": "kyoto_marathon.gpx",
      "url": "https://www.goandrace.com/gpx/2025/02/16/gpx_20250216_id10116_race1_20250111195530.gpx",
@@ -374,6 +376,10 @@ def build(course):
         "stations": stations,
         "points": [[round(p[0], 6), round(p[1], 6), round(e, 1)] for p, e in zip(samples, eles)],
     }
+    if course.get("tunnels"):
+        # Traced km → official km, like the stations.
+        out["tunnels"] = [[round(a * 1000 / total * MARATHON_KM, 3), round(b * 1000 / total * MARATHON_KM, 3)]
+                          for a, b in course["tunnels"]]
     path = os.path.join(OUT_DIR, f"{course['id']}.json")
     with open(path, "w") as f:
         json.dump(out, f, separators=(",", ":"))

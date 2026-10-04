@@ -49,12 +49,15 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
     /// from the camera each frame. (A MapKit annotation is repositioned on
     /// MapKit's own schedule, so at speed it jitters against the moving map.)
     private let pinLayer = CALayer()
-    /// The covered route, in the trail colour with a white edge. MapKit draws
-    /// the whole route underneath in a lighter see-through shade; replacing a
-    /// MapKit overlay as the runner moves makes it flicker, so the covered part
-    /// is our own layer, projected onto the map each frame.
-    private let trailCasing = CAShapeLayer()
-    private let trailCore = CAShapeLayer()
+    /// The route is drawn inside the map by `RouteRenderer`, so buildings hide
+    /// it like the road. These faint dotted "x-ray" lines on top keep the parts
+    /// a building hides (or a GPS point inside a building) traceable; where
+    /// the route is visible they blend into it.
+    private let ghostDone = CAShapeLayer()
+    private let ghostAhead = CAShapeLayer()
+    private var routeRenderer: RouteRenderer?
+    private var routeOverlay: RouteOverlay?
+    private var lastCoveredUpdate = 0.0
     private var pinColor: NSColor?
     private var appliedStyle: String?
     private var builtKey = ""
@@ -82,13 +85,13 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         map.showsScale = false
         map.showsUserLocation = false
         addSubview(map)
-        // The covered route, drawn above the map and updated every frame.
-        for (l, z) in [(trailCasing, 5.0), (trailCore, 6.0)] {
+        for (l, z) in [(ghostAhead, 5.0), (ghostDone, 6.0)] {
             l.zPosition = CGFloat(z)
             l.fillColor = nil
             l.lineCap = .round
             l.lineJoin = .round
-            l.actions = ["path": NSNull(), "lineWidth": NSNull(), "strokeColor": NSNull(), "hidden": NSNull()]
+            l.actions = ["path": NSNull(), "lineWidth": NSNull(), "strokeColor": NSNull(), "hidden": NSNull(),
+                         "lineDashPattern": NSNull()]
             layer?.addSublayer(l)
         }
         pinLayer.zPosition = 10
@@ -158,7 +161,10 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         let camera = MKMapCamera(lookingAtCenter: cam.coordinate, fromDistance: cam.distance,
                                  pitch: CGFloat(cam.tilt * 180 / .pi), heading: cam.heading * 180 / .pi)
         map.setCamera(camera, animated: false)
-        FrameStats.shared.measure("trail") { drawTrail(course: course, distance: engine.distance) }
+        FrameStats.shared.measure("trail") {
+            updateCovered(distance: engine.distance)
+            drawGhost(course: course, distance: engine.distance)
+        }
         placePin(course: course, distance: engine.distance)
 
         healSurface()
@@ -386,16 +392,17 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
 
     private func rebuild(_ course: Course, config: Config, key: String) {
         builtKey = key
-        renderers.removeAll()
         map.removeOverlays(map.overlays)
         map.removeAnnotations(map.annotations)
 
         let coords = course.lat.indices.map { CLLocationCoordinate2D(latitude: course.lat[$0], longitude: course.lon[$0]) }
-        let route = MKPolyline(coordinates: coords, count: coords.count)
-        route.title = "ahead"
+        let route = RouteOverlay(course: course)
+        routeOverlay = route
+        routeRenderer = nil
+        lastCoveredUpdate = 0
         map.addOverlay(route, level: .aboveRoads)
-        trailCasing.strokeColor = NSColor.white.withAlphaComponent(0.92).cgColor
-        trailCore.strokeColor = trailTint.cgColor
+        ghostDone.strokeColor = trailTint.withAlphaComponent(0.4).cgColor
+        ghostAhead.strokeColor = aheadTint.withAlphaComponent(0.3).cgColor
 
         var annotations: [MKAnnotation] = []
         for st in course.data.stations where (st.fluid && config.showFluid) || (st.fuel && config.showFuel) {
@@ -422,7 +429,6 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
     }
 
     private var routeWidth: CGFloat = 1
-    private var renderers: [MKPolylineRenderer] = []
 
     /// Thicker route when zoomed in (and per the option); only re-renders when it
     /// changes noticeably, e.g. during the intro swoop, not every frame.
@@ -430,10 +436,28 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         let w = PathWidth.zoomFactor(cameraDistance: cameraDistance) * config.pathWidth.scale
         guard abs(w - routeWidth) / routeWidth > 0.08 else { return }
         routeWidth = w
-        for r in renderers {
-            r.lineWidth = Self.aheadWidth * w
+        if let r = routeRenderer {
+            applyWidths(r)
             r.setNeedsDisplay()
         }
+    }
+
+    private func applyWidths(_ r: RouteRenderer) {
+        r.aheadWidth = Self.aheadWidth * routeWidth
+        r.coreWidth = Self.coreWidth * routeWidth
+        r.casingWidth = Self.casingWidth * routeWidth
+    }
+
+    /// Moves the end of the covered route to the runner, about ten times a
+    /// second (the pin hides the few metres in between).
+    private func updateCovered(distance: Double) {
+        guard let route = routeOverlay, let r = routeRenderer else { return }
+        let now = CACurrentMediaTime()
+        guard now - lastCoveredUpdate >= 0.1 else { return }
+        lastCoveredUpdate = now
+        // Widest line, in map points at the current zoom, with room to spare.
+        let pointsPerScreenPoint = map.visibleMapRect.size.width / Double(max(1, map.bounds.width))
+        r.setCovered(route.mapLength(atTraced: distance), padding: Double(Self.casingWidth * routeWidth) * pointsPerScreenPoint * 2)
     }
 
     private static let aheadWidth: CGFloat = 8
@@ -450,12 +474,11 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         (trailTint.blended(withFraction: 0.45, of: .white) ?? trailTint).withAlphaComponent(0.55)
     }
 
-    /// Draws the covered route up to the pin. Ground points map to the screen
+    /// The x-ray lines: the route near the camera, projected onto the screen
     /// through a plane-to-screen transform fitted to four points MapKit projects
-    /// around the runner, which is exact for flat ground and far cheaper than
-    /// asking MapKit for every point.
-    private func drawTrail(course: Course, distance: Double) {
-        let (index, _) = course.locate(distance)
+    /// around the runner (exact for flat ground, and far cheaper than asking
+    /// MapKit for every point).
+    private func drawGhost(course: Course, distance: Double) {
         let here = course.sample(at: distance)
         let reach = max(60, map.camera.centerCoordinateDistance * 0.2)
         let h = map.camera.heading * .pi / 180
@@ -468,51 +491,50 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         }
         guard screen.allSatisfy({ $0.x.isFinite && $0.y.isFinite }),
               let H = Homography(from: refs, to: screen.map { (Double($0.x), Double($0.y)) }) else {
-            trailCore.path = nil
-            trailCasing.path = nil
+            ghostDone.path = nil
+            ghostAhead.path = nil
             return
         }
-        let path = CGMutablePath()
-        var drawing = false
-        var last = CGPoint(x: CGFloat.nan, y: 0)
-        let end = map.convert(here.coordinate, toPointTo: self)
-        for i in stride(from: 0, through: index + 1, by: 1) {
-            let atEnd = i == index + 1
-            guard let p = atEnd ? end : H.apply(course.x[i] - here.x, course.y[i] - here.y) else {
-                drawing = false   // behind the camera
-                continue
+        // Only near the runner, where buildings get in the way and flat ground is
+        // a close enough guess; further out the line would drift off the road.
+        let radius = max(400, map.camera.centerCoordinateDistance * 1.5)
+        let (index, _) = course.locate(distance)
+        let pin = map.convert(here.coordinate, toPointTo: self)
+        func build(_ range: StrideThrough<Int>, endAtPin: Bool, startAtPin: Bool) -> CGPath {
+            let path = CGMutablePath()
+            var drawing = false
+            if startAtPin { path.move(to: pin); drawing = true }
+            for i in range {
+                let dx = course.x[i] - here.x, dy = course.y[i] - here.y
+                guard dx * dx + dy * dy < radius * radius, let p = H.apply(dx, dy) else { drawing = false; continue }
+                if drawing { path.addLine(to: p) } else { path.move(to: p); drawing = true }
             }
-            if !drawing {
-                path.move(to: p)
-                drawing = true
-            } else if atEnd || abs(p.x - last.x) + abs(p.y - last.y) > 1.5 {
-                path.addLine(to: p)
-            } else {
-                continue
-            }
-            last = p
+            if endAtPin && drawing { path.addLine(to: pin) }
+            return path
         }
+        let done = build(stride(from: 0, through: index, by: 1), endAtPin: true, startAtPin: false)
+        let ahead = build(stride(from: index + 1, through: course.x.count - 1, by: 1), endAtPin: false, startAtPin: true)
         let w = routeWidth
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        trailCasing.lineWidth = Self.casingWidth * w
-        trailCore.lineWidth = Self.coreWidth * w
-        trailCasing.path = path
-        trailCore.path = path
+        for (l, path) in [(ghostDone, done), (ghostAhead, ahead)] {
+            l.lineWidth = 2.2 * w
+            l.lineDashPattern = [0, NSNumber(value: Double(7 * w))]   // round dots
+            l.path = path
+        }
         CATransaction.commit()
     }
 
     // MARK: - MKMapViewDelegate
 
     func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
-        let r = MKPolylineRenderer(overlay: overlay)
-        r.lineCap = .round
-        r.lineJoin = .round
-        // The whole route, static, in the lighter shade; the covered part is
-        // drawn over it by `drawTrail`.
-        r.strokeColor = aheadTint
-        r.lineWidth = Self.aheadWidth * routeWidth
-        renderers.append(r)
+        guard let route = overlay as? RouteOverlay else { return MKOverlayRenderer(overlay: overlay) }
+        let r = RouteRenderer(route: route)
+        r.aheadColor = aheadTint
+        r.doneColor = trailTint
+        applyWidths(r)
+        if let engine { r.setCovered(route.mapLength(atTraced: engine.distance), padding: 0) }
+        routeRenderer = r
         return r
     }
 
