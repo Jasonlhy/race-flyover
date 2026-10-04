@@ -4,6 +4,7 @@
 #   ./build.sh            build both
 #   ./build.sh install    build, then install the screensaver into ~/Library/Screen Savers
 #   ./build.sh preview    build, then open the preview app
+#   ./build.sh release    build, then zip the screensaver for a GitHub release
 #
 # GPX files placed in Courses/ are bundled as extra courses.
 set -euo pipefail
@@ -89,5 +90,11 @@ case "${1:-}" in
     ;;
   preview)
     open "$APP"
+    ;;
+  release)
+    ZIP="$BUILD/RaceFlyover-$VERSION.zip"
+    rm -f "$ZIP"
+    ditto -c -k --norsrc --noextattr --noacl --keepParent "$SAVER" "$ZIP"
+    echo "✓ $ZIP"
     ;;
 esac

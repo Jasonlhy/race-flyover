@@ -94,7 +94,17 @@ On top of that sit the information panels: course name and flag, distance, the n
 minimap and the elevation profile. Neighbourhood names and landmarks come from Apple Maps too, and
 are remembered so each course only needs looking up once.
 
-## Build & install
+## Install
+
+1. Download **RaceFlyover-….zip** from the latest release on this repository's **Releases** page, and
+   unzip it.
+2. Double-click **RaceFlyover.saver** and choose whether to install it for just you or everyone.
+3. Because this build isn't notarised by Apple, macOS may say it can't check it for malware. If so, open
+   **System Settings › Privacy & Security**, scroll down and click **Open Anyway** next to Race Flyover,
+   then double-click the file again.
+4. Open **System Settings › Screen Saver**, scroll down to **Other**, and choose **Race Flyover**.
+
+## Build it yourself
 
 1. Download or clone this project.
 2. Open **Terminal** in the project folder and run:
@@ -107,7 +117,8 @@ are remembered so each course only needs looking up once.
 4. Click **Options…** to pick your courses and style. The version you're running is shown at the bottom
    left of Options.
 
-To try it in a window first, run `./build.sh preview`. In the preview window, the Space bar pauses,
+To try it in a window first, run `./build.sh preview`. `./build.sh release` makes the zip that's
+attached to a release. In the preview window, the Space bar pauses,
 the left and right arrows jump a kilometre, and **N** skips to the next course.
 
 **Adding your own race:** in Options, open **Courses** and click **Import GPX…**. Most race websites
