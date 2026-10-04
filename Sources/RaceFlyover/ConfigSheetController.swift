@@ -39,6 +39,7 @@ final class ConfigSheetController: NSObject {
     private let landmarksCheck = NSSwitch()
     private let autoTiltCheck = NSSwitch()
     private let frameRatePopup = NSPopUpButton()
+    private let adaptiveFPSCheck = NSSwitch()
     private let displaysPopup = NSPopUpButton()
     private let map3DCheck = NSSwitch()
     private let pinPopup = NSPopUpButton()
@@ -147,7 +148,8 @@ final class ConfigSheetController: NSObject {
                 section(nil, rows: [
                     row("Displays", control: displaysPopup),
                     row("Frame rate", control: frameRatePopup),
-                ], footer: note("For the smoothest playback: 30 fps, 3D buildings off, and “Main display only” if you have several screens.")),
+                    row("Drop to 30 fps when needed", subtitle: "If a screen can't keep up 60 fps", control: adaptiveFPSCheck),
+                ], footer: note("For the smoothest playback: 30 fps, 3D buildings off, and “Main display only” if you have several screens. “Drop to 30 fps when needed” keeps a steady 30 instead of an uneven 40 when two screens of 3D map are too much at 60.")),
             ]),
         ]
 
@@ -355,7 +357,7 @@ final class ConfigSheetController: NSObject {
             slider.isContinuous = true
             slider.widthAnchor.constraint(equalToConstant: 220).isActive = true
         }
-        for toggle in [fluidCheck, fuelCheck, markersCheck, map3DCheck, burstsCheck, landmarksCheck, autoTiltCheck] {
+        for toggle in [fluidCheck, fuelCheck, markersCheck, map3DCheck, burstsCheck, landmarksCheck, autoTiltCheck, adaptiveFPSCheck] {
             toggle.target = self
             toggle.action = #selector(changed)
             toggle.controlSize = .small
@@ -556,6 +558,7 @@ final class ConfigSheetController: NSObject {
         burstsCheck.state = config.showBursts ? .on : .off
         landmarksCheck.state = config.showLandmarks ? .on : .off
         autoTiltCheck.state = config.autoTilt ? .on : .off
+        adaptiveFPSCheck.state = config.adaptiveFPS ? .on : .off
         pinPopup.selectItem(at: AccentColor.allCases.firstIndex(of: config.pinColor) ?? 0)
         pinStylePopup.selectItem(at: PinStyle.allCases.firstIndex(of: config.pinStyle) ?? 0)
         pinSizeControl.selectedSegment = PinSize.allCases.firstIndex(of: config.pinSize) ?? 2
@@ -580,6 +583,7 @@ final class ConfigSheetController: NSObject {
         exaggerationSlider.isEnabled = !config.style.usesTiles
         zoomSlider.isEnabled = config.camera != .overview
         autoTiltCheck.isEnabled = config.camera != .overview
+        adaptiveFPSCheck.isEnabled = config.smooth60
         map3DCheck.isEnabled = config.style.usesTiles
 
         let ids = checkedIDs
@@ -640,6 +644,7 @@ final class ConfigSheetController: NSObject {
         config.showBursts = burstsCheck.state == .on
         config.showLandmarks = landmarksCheck.state == .on
         config.autoTilt = autoTiltCheck.state == .on
+        config.adaptiveFPS = adaptiveFPSCheck.state == .on
         config.pinColor = AccentColor(rawValue: pinPopup.selectedItem?.representedObject as? String ?? "") ?? .auto
         config.pinStyle = PinStyle(rawValue: pinStylePopup.selectedItem?.representedObject as? String ?? "") ?? .glass
         config.pinSize = PinSize.allCases[max(0, pinSizeControl.selectedSegment)]

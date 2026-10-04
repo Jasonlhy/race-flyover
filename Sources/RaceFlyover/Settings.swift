@@ -222,6 +222,7 @@ struct Config: Equatable {
     var camera = CameraMode.chase
     var tiltDegrees = 66.0            // 0 = straight down
     var autoTilt = true               // steeper among buildings, lower in open areas
+    var adaptiveFPS = false           // drop from 60 to a steady 30 fps if 60 can't be kept up
     var zoom = 0.42                   // 0 = street level, 1 = whole city
     var style = VisualStyle.midnight
     var exaggeration = 4.0            // elevation multiplier for stylized styles
@@ -269,6 +270,7 @@ final class Settings {
             if let v = d.string(forKey: "camera").flatMap(CameraMode.init) { c.camera = v }
             if d.object(forKey: "tilt") != nil { c.tiltDegrees = d.double(forKey: "tilt") }
             if d.object(forKey: "autoTilt") != nil { c.autoTilt = d.bool(forKey: "autoTilt") }
+            if d.object(forKey: "adaptiveFPS") != nil { c.adaptiveFPS = d.bool(forKey: "adaptiveFPS") }
             if d.object(forKey: "zoom") != nil { c.zoom = d.double(forKey: "zoom") }
             if let v = d.string(forKey: "style").flatMap(VisualStyle.init) { c.style = v }
             if d.object(forKey: "exaggeration") != nil { c.exaggeration = d.double(forKey: "exaggeration") }
@@ -300,6 +302,7 @@ final class Settings {
             d.set(newValue.camera.rawValue, forKey: "camera")
             d.set(newValue.tiltDegrees, forKey: "tilt")
             d.set(newValue.autoTilt, forKey: "autoTilt")
+            d.set(newValue.adaptiveFPS, forKey: "adaptiveFPS")
             d.set(newValue.zoom, forKey: "zoom")
             d.set(newValue.style.rawValue, forKey: "style")
             d.set(newValue.exaggeration, forKey: "exaggeration")

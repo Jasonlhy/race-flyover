@@ -31,7 +31,8 @@ public final class RaceFlyoverView: ScreenSaverView {
     private var superseded = false
     /// When the latest frame will be on screen.
     private(set) var lastTick: CFTimeInterval = 0
-    /// Frame rate actually asked of the display: drops to 30 if 60 can't be kept up.
+    /// Frame rate asked of the display with "Drop to 30 fps when needed": falls to
+    /// 30 if 60 can't be kept up.
     private var linkFPS: Float = 60
     private var rateWindow: (start: CFTimeInterval, frames: Int) = (0, 0)
     /// Display-synchronised clock (falls back to the screensaver timer if the
@@ -111,6 +112,9 @@ public final class RaceFlyoverView: ScreenSaverView {
         }
         installContent()
         animationTimeInterval = config.smooth60 ? 1.0 / 60 : 1.0 / 30
+        // New settings: give 60 fps another chance.
+        linkFPS = 60
+        rateWindow = (0, 0)
         updateLinkRate()
         renderFrame()
     }
@@ -241,7 +245,7 @@ public final class RaceFlyoverView: ScreenSaverView {
         }
     }
 
-    private var targetFPS: Float { min(config.smooth60 ? 60 : 30, linkFPS) }
+    private var targetFPS: Float { config.smooth60 ? (config.adaptiveFPS ? linkFPS : 60) : 30 }
 
     private func startLink() {
         guard link == nil, window != nil else { return }
@@ -344,10 +348,11 @@ public final class RaceFlyoverView: ScreenSaverView {
         stats.reportIfDue(label: "view#\(serial) [\(screen)\(leader == nil ? "" : ", following #\(leader!.serial)")] \(config.style.rawValue)\(config.map3D ? "" : "-flat") \(Int(targetFPS))fps-target \(Int(bounds.width))x\(Int(bounds.height))")
     }
 
-    /// A steady 30 fps looks smoother than an uneven 40, so if 60 isn't being
-    /// kept up (two big screens of 3D map can be too much), settle at 30.
+    /// When the option is on: a steady 30 fps looks smoother than an uneven 40,
+    /// so if 60 isn't being kept up (two big screens of 3D map can be too
+    /// much), settle at 30.
     private func adaptFrameRate(at time: CFTimeInterval) {
-        guard config.smooth60, linkFPS > 30, link != nil else { return }
+        guard config.smooth60, config.adaptiveFPS, linkFPS > 30, link != nil else { return }
         // Judge only the steady part of a run, not the map loading at the start.
         guard engine?.phase == .running else { rateWindow = (0, 0); return }
         if rateWindow.start == 0 || time - rateWindow.start > 30 { rateWindow = (time, 0); return }
