@@ -25,7 +25,7 @@ minimap of the whole course, and the elevation profile along the bottom.*
 | ![Tokyo Marathon in the Neon Grid look](docs/screenshots/neon-tokyo.jpg) | ![Kyoto Marathon title card in the Blueprint look](docs/screenshots/intro-kyoto.jpg) |
 | **Tokyo** · the Neon Grid look | **Kyoto** · each course opens with a title card |
 | ![Chicago Marathon finish card](docs/screenshots/finish-chicago.jpg) | ![Settings: choosing courses](docs/screenshots/settings-courses.jpg) |
-| **Chicago** · and closes with a finish card | **Settings** · pick exactly which races to fly |
+| **Chicago** · and closes with a finisher's medal | **Settings** · pick exactly which races to fly |
 
 ## What you'll see
 
@@ -51,8 +51,8 @@ minimap of the whole course, and the elevation profile along the bottom.*
   get a proper look before the run picks up again.
 - **Automatic tilt**: the camera looks down more steeply where the streets are packed with
   buildings, so they don't hide the route, and flies lower over parks, rivers and open roads.
-- **A title card** at the start of each course and a **finish card** at the end, placed low on the
-  screen so they never clash with the clock macOS shows on the lock screen.
+- **A title card** at the start of each course, placed low on the screen so it never clashes with the
+  clock macOS shows on the lock screen, and a **finisher's medal** in the middle of the screen at the end.
 
 ## Settings
 
@@ -68,7 +68,7 @@ settings are grouped like the rest of System Settings:
 | **Appearance** | Fly over Apple Maps (satellite or street map, with optional 3D buildings), or one of five drawn looks: Midnight, Neon Grid, Daylight, Blueprint and Minimal Mono. Choose the pin's style (glass or solid), size and colour, and the trail's colour and thickness. |
 | **Overlay** | Show all the information panels, just the essentials, or nothing. Solid panels or Apple's Liquid Glass, light or dark to match the look you picked rather than your Mac's appearance. Kilometres or miles. Pick a typeface and text size. |
 | **On the Route** | Turn water stations, fuel stations, distance markers, the passing pulse and landmarks on or off. Choose where the runner slows down for a closer look: nowhere, landmarks, landmarks and stations, or all of those plus distance markers. |
-| **Performance** | Choose what happens on multiple screens and set the frame rate, and whether a screen that can't keep up 60 fps should drop to a steady 30. |
+| **Performance** | Choose what happens on multiple screens and set the frame rate (24 fps saves the most power, 60 is the smoothest), and whether a screen that can't keep up 60 fps should drop to a steady 30. |
 
 ## What you need
 
@@ -131,7 +131,7 @@ project and run `./build.sh install` again.
 **Smooth playback.** The Apple Maps looks with 3D buildings are the most demanding: they can keep a
 Mac's processor quite busy. If playback isn't smooth:
 
-- set **Frame rate** to 30 fps (it's still smooth, and much lighter than 60);
+- set **Frame rate** to 30 fps (it's still smooth, and much lighter than 60), or 24 fps to save the most power;
 - turn off **3D buildings & terrain** (this cuts the work to about a third);
 - with more than one screen, choose **Main display only**: each screen draws its own copy otherwise.
 

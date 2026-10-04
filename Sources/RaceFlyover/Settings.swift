@@ -99,6 +99,19 @@ enum SlowDown: String, CaseIterable {
     var markers: Bool { self == .everything }
 }
 
+/// Frames per second. Lower rates use less power; 60 is the smoothest.
+enum FrameRate: Int, CaseIterable {
+    case fps24 = 24, fps30 = 30, fps60 = 60
+
+    var title: String {
+        switch self {
+        case .fps24: return "24 fps · saves power"
+        case .fps30: return "30 fps"
+        case .fps60: return "60 fps · smoothest"
+        }
+    }
+}
+
 enum PathWidth: String, CaseIterable {
     case thin, regular, thick, extraThick
 
@@ -231,7 +244,7 @@ struct Config: Equatable {
     var showFluid = true
     var showFuel = true
     var showMarkers = true
-    var smooth60 = false
+    var frameRate = FrameRate.fps30
     var typeface = Typeface.system
     var textScale = 1.0               // overlay size multiplier
     var panels = PanelStyle.solid
@@ -279,7 +292,11 @@ final class Settings {
             if d.object(forKey: "showFluid") != nil { c.showFluid = d.bool(forKey: "showFluid") }
             if d.object(forKey: "showFuel") != nil { c.showFuel = d.bool(forKey: "showFuel") }
             if d.object(forKey: "showMarkers") != nil { c.showMarkers = d.bool(forKey: "showMarkers") }
-            if d.object(forKey: "smooth60") != nil { c.smooth60 = d.bool(forKey: "smooth60") }
+            if let v = FrameRate(rawValue: d.integer(forKey: "frameRate")) {
+                c.frameRate = v
+            } else if d.object(forKey: "smooth60") != nil {
+                c.frameRate = d.bool(forKey: "smooth60") ? .fps60 : .fps30   // earlier on/off setting
+            }
             if let v = d.string(forKey: "typeface").flatMap(Typeface.init) { c.typeface = v }
             if let v = d.string(forKey: "panels").flatMap(PanelStyle.init) { c.panels = v }
             if let v = d.string(forKey: "displays").flatMap(DisplayMode.init) { c.displays = v }
@@ -311,7 +328,7 @@ final class Settings {
             d.set(newValue.showFluid, forKey: "showFluid")
             d.set(newValue.showFuel, forKey: "showFuel")
             d.set(newValue.showMarkers, forKey: "showMarkers")
-            d.set(newValue.smooth60, forKey: "smooth60")
+            d.set(newValue.frameRate.rawValue, forKey: "frameRate")
             d.set(newValue.typeface.rawValue, forKey: "typeface")
             d.set(newValue.panels.rawValue, forKey: "panels")
             d.set(newValue.displays.rawValue, forKey: "displays")

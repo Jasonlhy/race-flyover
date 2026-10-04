@@ -156,6 +156,115 @@ enum Draw {
         ctx.restoreGState()
     }
 
+    /// A finisher's medal hanging from a V-shaped ribbon, with `title` struck
+    /// on its face and `subtitle` beneath. `top` is the top of the ribbon; the
+    /// whole emblem is about 4.2 × radius tall. Returns the medal's centre.
+    @discardableResult
+    static func medal(_ ctx: CGContext, centreX cx: CGFloat, top: CGFloat, radius r: CGFloat,
+                      ribbon: NSColor, title: String, subtitle: String) -> CGPoint {
+        let c = CGPoint(x: cx, y: top + r * 2.2)
+        let space = CGColorSpace(name: CGColorSpace.sRGB)
+        func gradient(_ colors: [NSColor], _ locations: [CGFloat]) -> CGGradient? {
+            CGGradient(colorsSpace: space, colors: colors.map(\.cgColor) as CFArray, locations: locations)
+        }
+
+        // Ribbon: two straps crossing behind the medal, each with a white stripe.
+        func strap(_ side: CGFloat, shade: CGFloat) {
+            let topOuter = CGPoint(x: cx + side * r * 1.0, y: top)
+            let topInner = CGPoint(x: cx + side * r * 0.42, y: top)
+            let lowInner = CGPoint(x: cx - side * r * 0.18, y: c.y - r * 0.7)
+            let lowOuter = CGPoint(x: cx + side * r * 0.40, y: c.y - r * 0.7)
+            let path = CGMutablePath()
+            path.addLines(between: [topOuter, topInner, lowInner, lowOuter])
+            path.closeSubpath()
+            ctx.addPath(path)
+            ctx.setFillColor((ribbon.blended(withFraction: shade, of: .black) ?? ribbon).cgColor)
+            ctx.fillPath()
+            // Centre stripe, a third of the strap's width.
+            func lerp(_ a: CGPoint, _ b: CGPoint, _ t: CGFloat) -> CGPoint { CGPoint(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t) }
+            let stripe = CGMutablePath()
+            stripe.addLines(between: [lerp(topInner, topOuter, 0.36), lerp(topInner, topOuter, 0.64),
+                                      lerp(lowInner, lowOuter, 0.64), lerp(lowInner, lowOuter, 0.36)])
+            stripe.closeSubpath()
+            ctx.addPath(stripe)
+            ctx.setFillColor(NSColor(white: 1, alpha: 0.85 - shade).cgColor)
+            ctx.fillPath()
+        }
+        strap(1, shade: 0.28)   // behind
+        strap(-1, shade: 0.0)
+
+        // Ring that holds the ribbon.
+        ctx.setStrokeColor(Theme.hex(0xC9962B).cgColor)
+        ctx.setLineWidth(r * 0.07)
+        ctx.strokeEllipse(in: CGRect(x: cx - r * 0.16, y: c.y - r * 1.12, width: r * 0.32, height: r * 0.32))
+
+        // Medal: soft shadow, gold disc, bevelled inner face.
+        let disc = CGRect(x: c.x - r, y: c.y - r, width: r * 2, height: r * 2)
+        ctx.saveGState()
+        ctx.setShadow(offset: CGSize(width: 0, height: r * 0.06), blur: r * 0.25, color: NSColor.black.withAlphaComponent(0.5).cgColor)
+        ctx.setFillColor(Theme.hex(0xD9A93A).cgColor)
+        ctx.fillEllipse(in: disc)
+        ctx.restoreGState()
+        ctx.saveGState()
+        ctx.addEllipse(in: disc)
+        ctx.clip()
+        if let g = gradient([Theme.hex(0xFFE9A3), Theme.hex(0xE9B949), Theme.hex(0xB07D1C)], [0, 0.5, 1]) {
+            ctx.drawLinearGradient(g, start: CGPoint(x: disc.minX, y: disc.minY), end: CGPoint(x: disc.maxX, y: disc.maxY), options: [])
+        }
+        ctx.restoreGState()
+        let face = disc.insetBy(dx: r * 0.14, dy: r * 0.14)
+        ctx.saveGState()
+        ctx.addEllipse(in: face)
+        ctx.clip()
+        if let g = gradient([Theme.hex(0xB8861F), Theme.hex(0xF2C95A), Theme.hex(0xFFEFB8)], [0, 0.55, 1]) {
+            ctx.drawLinearGradient(g, start: CGPoint(x: face.minX, y: face.minY), end: CGPoint(x: face.maxX, y: face.maxY), options: [])
+        }
+        ctx.restoreGState()
+        ctx.setStrokeColor(Theme.hex(0x9C7015, 0.8).cgColor)
+        ctx.setLineWidth(max(1, r * 0.025))
+        ctx.strokeEllipse(in: disc.insetBy(dx: r * 0.012, dy: r * 0.012))
+        ctx.strokeEllipse(in: face)
+        ctx.setStrokeColor(Theme.hex(0x9C7015, 0.45).cgColor)
+        ctx.strokeEllipse(in: face.insetBy(dx: r * 0.08, dy: r * 0.08))
+
+        // Laurel sprigs curving up both sides of the face.
+        ctx.setFillColor(Theme.hex(0x9C7015, 0.75).cgColor)
+        for side in [-1.0, 1.0] as [CGFloat] {
+            for k in 0..<6 {
+                let a = (CGFloat.pi / 2) + side * (0.45 + CGFloat(k) * 0.24)   // from the bottom, round each side
+                let p = CGPoint(x: c.x + cos(a) * r * 0.62, y: c.y + sin(a) * r * 0.62)
+                ctx.saveGState()
+                ctx.translateBy(x: p.x, y: p.y)
+                ctx.rotate(by: a + side * 1.2)
+                ctx.fillEllipse(in: CGRect(x: -r * 0.085, y: -r * 0.035, width: r * 0.17, height: r * 0.07))
+                ctx.restoreGState()
+            }
+        }
+
+        // Lettering struck into the face (a light edge below reads as engraved).
+        let engraved = Theme.hex(0x6B4A0E)
+        let titleText = text(title, size: r * 0.26, weight: .black, color: engraved, tracking: r * 0.025)
+        let highlight = text(title, size: r * 0.26, weight: .black, color: NSColor(white: 1, alpha: 0.45), tracking: r * 0.025)
+        let ts = titleText.size()
+        let ty = c.y - ts.height * 0.62
+        highlight.draw(at: CGPoint(x: c.x - ts.width / 2, y: ty + max(1, r * 0.012)))
+        titleText.draw(at: CGPoint(x: c.x - ts.width / 2, y: ty))
+        let sub = text(subtitle, size: r * 0.12, weight: .bold, color: engraved, tracking: r * 0.02)
+        let ss = sub.size()
+        sub.draw(at: CGPoint(x: c.x - ss.width / 2, y: ty + ts.height * 0.92))
+
+        // Shine across the upper left.
+        ctx.saveGState()
+        ctx.addEllipse(in: disc)
+        ctx.clip()
+        if let g = gradient([NSColor(white: 1, alpha: 0.35), NSColor(white: 1, alpha: 0)], [0, 1]) {
+            ctx.drawRadialGradient(g, startCenter: CGPoint(x: c.x - r * 0.45, y: c.y - r * 0.5), startRadius: 0,
+                                   endCenter: CGPoint(x: c.x - r * 0.45, y: c.y - r * 0.5), endRadius: r * 0.9, options: [])
+        }
+        ctx.restoreGState()
+        return c
+    }
+
     /// A glass puck lying on the road: a see-through edge (`base`, on the ground),
     /// a clear glass face (`rim`, lifted by the puck's thickness) and a
     /// see-through disc of the pin colour in its middle (`centre`). Light glass

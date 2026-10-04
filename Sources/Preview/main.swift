@@ -19,7 +19,7 @@ import UniformTypeIdentifiers
 //   --tilt 60  --zoom 0.4  --camera chase|northUp|overview  --lap 15 (minutes)
 //   --hud full|minimal|off  --units km|mi  --font avenir  --text-scale 1.2  --panels glass
 //   --slow off|landmarks|stations|everything
-//   --pin blue  --trail purple  --map3d on|off  --fps 30|60  --size 1920x1080  --thumbnail
+//   --pin blue  --trail purple  --map3d on|off  --fps 24|30|60  --size 1920x1080  --thumbnail
 
 let arguments = CommandLine.arguments
 
@@ -47,7 +47,7 @@ func applyOverrides(_ view: RaceFlyoverView) {
         if let v = option("--pin-style").flatMap(PinStyle.init) { c.pinStyle = v }
         if let v = option("--path").flatMap(PathWidth.init) { c.pathWidth = v }
         if let v = option("--slow").flatMap(SlowDown.init) { c.slowDown = v }
-        if let v = option("--fps").flatMap(Int.init) { c.smooth60 = v >= 60 }
+        if let v = option("--fps").flatMap(Int.init) { c.frameRate = v >= 60 ? .fps60 : (v <= 24 ? .fps24 : .fps30) }
         if let v = option("--trail").flatMap(AccentColor.init) { c.trailColor = v }
         if let v = option("--text-scale").flatMap(Double.init) { c.textScale = v }
     }

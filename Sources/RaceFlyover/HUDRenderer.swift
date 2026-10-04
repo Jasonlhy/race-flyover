@@ -546,17 +546,42 @@ struct HUDRenderer {
         ctx.drawLinearGradient(g, start: CGPoint(x: 0, y: top), end: CGPoint(x: 0, y: bottom), options: [])
     }
 
+    /// The finish: a medal emblem with the course beneath, in the middle of the screen.
     private func drawFinishCard(_ ctx: CGContext, alpha: CGFloat) {
         ctx.saveGState()
         ctx.setAlpha(alpha)
-        let lines: [(NSAttributedString, CGFloat)] = [
-            (Draw.text("FINISH", size: 84 * s, weight: .black, color: theme.accent, tracking: 8 * s), 0),
-            (Draw.text(course.name + "  ·  " + units.format(km: course.data.distanceKm, decimals: units == .km ? 3 : 1),
-                       size: 20 * s, weight: .medium, color: theme.text), 0),
-        ]
-        let fullHUD = !thumbnail && engine.config.hud == .full
-        drawCentredLines(ctx, lines, bottom: (fullHUD ? profileTop - 24 * s : size.height - margin - 10 * s)
-                         - (glass != nil ? 24 * s : 0), alpha: alpha)
+        let r = 92 * s
+        let emblemHeight = r * 3.2
+        let name = NSMutableAttributedString()
+        if let flag = course.flag { name.append(Draw.text(flag + "  ", size: 28 * s, color: theme.text)) }
+        name.append(Draw.text(course.name, size: 32 * s, weight: .semibold, color: theme.text))
+        let stats = [
+            units.format(km: course.data.distanceKm, decimals: units == .km ? 3 : 1),
+            plural(course.fluidStations, "fluid station"),
+            units.formatElevation(course.elevationGain) + " climbing",
+        ].joined(separator: "   ·   ")
+        let statsText = Draw.text(stats, size: 16 * s, weight: .medium, color: theme.textSecondary, mono: true)
+        let gap = 26 * s, lineGap = 10 * s
+        let contentHeight = emblemHeight + gap + name.size().height + lineGap + statsText.size().height
+        let contentWidth = max(r * 2.6, name.size().width, statsText.size().width)
+        // A gentle settle as it appears.
+        let lift = (1 - alpha) * 18 * s
+        let card = CGRect(x: (size.width - contentWidth) / 2 - 56 * s, y: (size.height - contentHeight) / 2 - 40 * s + lift,
+                          width: contentWidth + 112 * s, height: contentHeight + 80 * s).integral
+        if let glass {
+            glass.panels.append(GlassPanel(rect: card, radius: 32 * s, alpha: alpha))
+        } else {
+            Draw.roundedRect(ctx, card, radius: 28 * s, fill: theme.panel.withAlphaComponent(min(1, theme.panel.alphaComponent + 0.15)),
+                             stroke: theme.text.withAlphaComponent(0.1))
+        }
+        frames?.add(.card, card.insetBy(dx: -20 * s, dy: -20 * s))
+        var y = card.minY + 40 * s
+        Draw.medal(ctx, centreX: size.width / 2, top: y, radius: r, ribbon: theme.accent, title: "FINISH",
+                   subtitle: units.format(km: course.data.distanceKm, decimals: units == .km ? 3 : 1).uppercased())
+        y += emblemHeight + gap
+        y += Draw.string(name, at: CGPoint(x: size.width / 2, y: y), anchor: 0.5).height + lineGap
+        Draw.string(statsText, at: CGPoint(x: size.width / 2, y: y), anchor: 0.5)
         ctx.restoreGState()
     }
+
 }

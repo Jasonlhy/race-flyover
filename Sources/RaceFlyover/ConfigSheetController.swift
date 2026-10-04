@@ -149,7 +149,7 @@ final class ConfigSheetController: NSObject {
                     row("Displays", control: displaysPopup),
                     row("Frame rate", control: frameRatePopup),
                     row("Drop to 30 fps when needed", subtitle: "If a screen can't keep up 60 fps", control: adaptiveFPSCheck),
-                ], footer: note("For the smoothest playback: 30 fps, 3D buildings off, and “Main display only” if you have several screens. “Drop to 30 fps when needed” keeps a steady 30 instead of an uneven 40 when two screens of 3D map are too much at 60.")),
+                ], footer: note("Lower frame rates use less power; 24 fps is the lightest. If playback isn’t smooth, try a lower rate, turn off 3D buildings, or choose “Main display only” with several screens. “Drop to 30 fps when needed” keeps a steady 30 instead of an uneven 40 when two screens of 3D map are too much at 60.")),
             ]),
         ]
 
@@ -389,7 +389,10 @@ final class ConfigSheetController: NSObject {
         for (i, w) in PathWidth.allCases.enumerated() { pathWidthControl.setLabel(w.title, forSegment: i) }
         pathWidthControl.trackingMode = .selectOne
         frameRatePopup.removeAllItems()
-        frameRatePopup.addItems(withTitles: ["30 fps", "60 fps"])
+        for rate in FrameRate.allCases {
+            frameRatePopup.addItem(withTitle: rate.title)
+            frameRatePopup.lastItem?.tag = rate.rawValue
+        }
         displaysPopup.removeAllItems()
         for mode in DisplayMode.allCases {
             displaysPopup.addItem(withTitle: mode.title)
@@ -562,7 +565,7 @@ final class ConfigSheetController: NSObject {
         fluidCheck.state = config.showFluid ? .on : .off
         fuelCheck.state = config.showFuel ? .on : .off
         markersCheck.state = config.showMarkers ? .on : .off
-        frameRatePopup.selectItem(at: config.smooth60 ? 1 : 0)
+        frameRatePopup.selectItem(withTag: config.frameRate.rawValue)
         displaysPopup.selectItem(at: DisplayMode.allCases.firstIndex(of: config.displays) ?? 0)
         map3DCheck.state = config.map3D ? .on : .off
         burstsCheck.state = config.showBursts ? .on : .off
@@ -593,7 +596,7 @@ final class ConfigSheetController: NSObject {
         exaggerationSlider.isEnabled = !config.style.usesTiles
         zoomSlider.isEnabled = config.camera != .overview
         autoTiltCheck.isEnabled = config.camera != .overview
-        adaptiveFPSCheck.isEnabled = config.smooth60
+        adaptiveFPSCheck.isEnabled = config.frameRate == .fps60
         map3DCheck.isEnabled = config.style.usesTiles
 
         let ids = checkedIDs
@@ -648,7 +651,7 @@ final class ConfigSheetController: NSObject {
         config.showFluid = fluidCheck.state == .on
         config.showFuel = fuelCheck.state == .on
         config.showMarkers = markersCheck.state == .on
-        config.smooth60 = frameRatePopup.indexOfSelectedItem == 1
+        config.frameRate = FrameRate(rawValue: frameRatePopup.selectedTag()) ?? .fps30
         config.displays = DisplayMode(rawValue: displaysPopup.selectedItem?.representedObject as? String ?? "") ?? .same
         config.map3D = map3DCheck.state == .on
         config.showBursts = burstsCheck.state == .on

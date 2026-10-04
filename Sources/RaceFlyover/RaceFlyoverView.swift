@@ -105,7 +105,7 @@ public final class RaceFlyoverView: ScreenSaverView {
         let start = playlist.count > 1 ? Int.random(in: 0..<playlist.count) : 0
         engine = FlyoverEngine(playlist: playlist, config: config, startIndex: start)
         installContent()
-        animationTimeInterval = config.smooth60 ? 1.0 / 60 : 1.0 / 30
+        animationTimeInterval = 1.0 / Double(config.frameRate.rawValue)
     }
 
     private func applyConfig() {
@@ -117,7 +117,7 @@ public final class RaceFlyoverView: ScreenSaverView {
             rebuildEngine()
         }
         installContent()
-        animationTimeInterval = config.smooth60 ? 1.0 / 60 : 1.0 / 30
+        animationTimeInterval = 1.0 / Double(config.frameRate.rawValue)
         // New settings: give 60 fps another chance.
         linkFPS = 60
         rateWindow = (0, 0)
@@ -252,7 +252,9 @@ public final class RaceFlyoverView: ScreenSaverView {
         }
     }
 
-    private var targetFPS: Float { config.smooth60 ? (config.adaptiveFPS ? linkFPS : 60) : 30 }
+    private var targetFPS: Float {
+        config.frameRate == .fps60 && config.adaptiveFPS ? linkFPS : Float(config.frameRate.rawValue)
+    }
 
     private func startLink() {
         guard link == nil, window != nil else { return }
@@ -372,7 +374,7 @@ public final class RaceFlyoverView: ScreenSaverView {
     /// so if 60 isn't being kept up (two big screens of 3D map can be too
     /// much), settle at 30.
     private func adaptFrameRate(at time: CFTimeInterval) {
-        guard config.smooth60, config.adaptiveFPS, linkFPS > 30, link != nil else { return }
+        guard config.frameRate == .fps60, config.adaptiveFPS, linkFPS > 30, link != nil else { return }
         // Judge only the steady part of a run, not the map loading at the start.
         guard engine?.phase == .running else { rateWindow = (0, 0); return }
         if rateWindow.start == 0 || time - rateWindow.start > 30 { rateWindow = (time, 0); return }
