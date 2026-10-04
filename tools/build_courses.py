@@ -5,8 +5,8 @@ Builds the bundled course files in Resources/Courses/*.json.
 Source geometry and aid-station waypoints come from the community collection at
 https://github.com/distanzrunning/gpx (GeoJSON exports of race course maps).
 That repository does not state a licence, so the generated files are meant for
-personal use. Swap in an official GPX from your race organiser via the
-screensaver's Options sheet whenever you have one.
+personal use. To add a race, add it to COURSES below (with an official GPX
+or GeoJSON route where possible) and rebuild.
 
 For each course the script:
   * downloads the GeoJSON (cached in build/src),

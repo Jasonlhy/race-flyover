@@ -271,6 +271,11 @@ final class Settings {
     init() {
         let id = Bundle(for: Settings.self).bundleIdentifier ?? "com.raceflyover.saver"
         defaults = ScreenSaverDefaults(forModuleWithName: id) ?? .standard
+        // Races imported from GPX in earlier versions: no longer supported.
+        if defaults.object(forKey: "importedCourses") != nil {
+            defaults.removeObject(forKey: "importedCourses")
+            defaults.synchronize()
+        }
     }
 
     var config: Config {
@@ -347,23 +352,9 @@ final class Settings {
         }
     }
 
-    /// Courses imported from GPX through the Options sheet.
-    var importedCourses: [CourseData] {
-        get {
-            guard let data = defaults.data(forKey: "importedCourses") else { return [] }
-            return (try? JSONDecoder().decode([CourseData].self, from: data)) ?? []
-        }
-        set {
-            defaults.set(try? JSONEncoder().encode(newValue), forKey: "importedCourses")
-            defaults.synchronize()
-            CourseLibrary.invalidate()
-            NotificationCenter.default.post(name: Settings.didChange, object: nil)
-        }
-    }
 }
 
-/// Bundled courses (JSON built by tools/build_courses.py, plus any GPX files
-/// dropped into Resources/Courses at build time) and GPX imports.
+/// The bundled courses, built by tools/build_courses.py.
 enum CourseLibrary {
     private static var cache: [Course]?
 
@@ -376,19 +367,13 @@ enum CourseLibrary {
         if let dir = bundle.resourceURL?.appendingPathComponent("Courses"),
            let files = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) {
             for url in files.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
-                guard let data = try? Data(contentsOf: url) else { continue }
-                var course: CourseData?
-                switch url.pathExtension.lowercased() {
-                case "json": course = try? JSONDecoder().decode(CourseData.self, from: data)
-                case "gpx": course = try? GPXImporter.course(fromGPX: data, fileName: url.lastPathComponent)
-                default: break
-                }
-                if let course, let c = Course(data: course) { result.append(c) }
+                guard url.pathExtension.lowercased() == "json", let data = try? Data(contentsOf: url),
+                      let course = try? JSONDecoder().decode(CourseData.self, from: data),
+                      let c = Course(data: course) else { continue }
+                result.append(c)
             }
         }
-        result += settings.importedCourses.compactMap(Course.init)
         result.sort { a, b in
-            if a.isImported != b.isImported { return !a.isImported }
             if a.isMajor != b.isMajor { return a.isMajor }
             return a.name < b.name
         }

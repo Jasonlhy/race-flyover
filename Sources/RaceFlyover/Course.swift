@@ -19,7 +19,6 @@ struct CourseData: Codable {
     var distanceKm: Double
     var source: String?
     var stationsEstimated: Bool?
-    var imported: Bool?
     /// ISO 3166-1 alpha-2 country code, for the flag in the HUD.
     var country: String?
     /// Famous landmarks along the route, by name; resolved with Apple Maps at runtime.
@@ -65,7 +64,6 @@ final class Course {
     var id: String { data.id }
     var name: String { data.name }
     var isMajor: Bool { data.major ?? false }
-    var isImported: Bool { data.imported ?? false }
     var fluidStations: Int { data.stations.filter(\.fluid).count }
     var fuelStations: Int { data.stations.filter(\.fuel).count }
 

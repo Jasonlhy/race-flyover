@@ -5,8 +5,6 @@
 #   ./build.sh install    build, then install the screensaver into ~/Library/Screen Savers
 #   ./build.sh preview    build, then open the preview app
 #   ./build.sh release    build, then zip the screensaver for a GitHub release
-#
-# GPX files placed in Courses/ are bundled as extra courses.
 set -euo pipefail
 cd "${0:A:h}"
 
@@ -33,9 +31,6 @@ compile() { # $1 output, $2 module, rest: extra args
 copy_courses() { # $1 resources dir
   mkdir -p "$1/Courses"
   cp Resources/Courses/*.json "$1/Courses/"
-  if [[ -d Courses ]]; then
-    find Courses -maxdepth 1 -iname '*.gpx' -exec cp {} "$1/Courses/" \;
-  fi
 }
 
 # Version shown in Options: the release tag when building one (v1.0.0), else the

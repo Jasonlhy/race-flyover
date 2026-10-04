@@ -131,7 +131,7 @@ struct HUDRenderer {
     // MARK: - Corners
 
     private func drawTitle(_ ctx: CGContext) {
-        let eyebrow = line(Draw.text(course.isMajor ? "WORLD MARATHON MAJOR" : (course.isImported ? "YOUR COURSE" : "RACE COURSE"),
+        let eyebrow = line(Draw.text(course.isMajor ? "WORLD MARATHON MAJOR" : "RACE COURSE",
                                      size: 11.5 * s, weight: .bold, color: theme.accent, tracking: 2.2 * s))
         let nameText = NSMutableAttributedString()
         if let flag = course.flag {

@@ -1,5 +1,4 @@
 import AppKit
-import UniformTypeIdentifiers
 
 /// The Options sheet. Changes apply live (the System Settings thumbnail and the
 /// preview app update as you drag); Cancel restores what was there before.
@@ -14,7 +13,6 @@ final class ConfigSheetController: NSObject {
     /// Course checklist: tick exactly the courses to play.
     private let courseList = NSStackView()
     private var courseChecks: [String: NSButton] = [:]
-    private let importButton = NSButton(title: "Import GPX…", target: nil, action: nil)
     private let lapSlider = NSSlider()
     private let lapLabel = NSTextField(labelWithString: "")
     private let cameraControl = NSSegmentedControl()
@@ -94,7 +92,7 @@ final class ConfigSheetController: NSObject {
                 section("Courses", accessory: hstack([quick("All", #selector(selectAllCourses)),
                                                       quick("Majors", #selector(selectMajors)),
                                                       quick("None", #selector(selectNoCourses))]),
-                        rows: [courseChooser(), row("Your own race", control: importButton)],
+                        rows: [courseChooser()],
                         footer: infoLabel),
                 section(nil, rows: [row("Flyover time", detail: lapLabel, control: lapSlider)],
                         footer: note("About 3–4 hours is close to real race pace.")),
@@ -372,8 +370,6 @@ final class ConfigSheetController: NSObject {
             toggle.action = #selector(changed)
             toggle.controlSize = .small
         }
-        importButton.target = self
-        importButton.action = #selector(importGPX)
 
         pinStylePopup.removeAllItems()
         pinStylePopup.autoenablesItems = false
@@ -484,7 +480,6 @@ final class ConfigSheetController: NSObject {
         courseList.edgeInsets = NSEdgeInsets(top: 10, left: 0, bottom: 10, right: 0)
         // Fill the row so the checklist starts at the left edge rather than centring.
         courseList.setHuggingPriority(.init(1), for: .horizontal)
-        importButton.controlSize = .small
         return courseList
     }
 
@@ -495,9 +490,8 @@ final class ConfigSheetController: NSObject {
         let courses = CourseLibrary.all(settings: settings)
         let selected = CourseLibrary.selectedIDs(config.selection, settings: settings)
         let groups: [(String, [Course])] = [
-            ("World Marathon Majors", courses.filter { $0.isMajor && !$0.isImported }),
-            ("More marathons", courses.filter { !$0.isMajor && !$0.isImported }),
-            ("Your courses", courses.filter(\.isImported)),
+            ("World Marathon Majors", courses.filter(\.isMajor)),
+            ("More marathons", courses.filter { !$0.isMajor }),
         ]
         for (title, list) in groups where !list.isEmpty {
             let header = NSTextField(labelWithString: title.uppercased())
@@ -513,14 +507,7 @@ final class ConfigSheetController: NSObject {
                 check.state = selected.contains(c.id) ? .on : .off
                 check.toolTip = "\(c.name) — \(c.data.city)"
                 courseChecks[c.id] = check
-                if c.isImported {
-                    let remove = NSButton(title: "Remove", target: self, action: #selector(removeImported(_:)))
-                    remove.controlSize = .mini
-                    remove.identifier = NSUserInterfaceItemIdentifier(c.id)
-                    cells.append(hstack([check, remove]))
-                } else {
-                    cells.append(check)
-                }
+                cells.append(check)
             }
             let rows = stride(from: 0, to: cells.count, by: 2).map { i -> [NSView] in
                 [cells[i], i + 1 < cells.count ? cells[i + 1] : NSGridCell.emptyContentView]
@@ -665,55 +652,6 @@ final class ConfigSheetController: NSObject {
         config.trailColor = AccentColor(rawValue: trailPopup.selectedItem?.representedObject as? String ?? "") ?? .auto
         updateLabels()
         settings.config = config
-    }
-
-    @objc private func importGPX() {
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [UTType(filenameExtension: "gpx") ?? .xml]
-        panel.allowsMultipleSelection = true
-        panel.message = "Choose a GPX course file. Waypoints named water, aid, gel, etc. become stations."
-        // Present as a standalone dialog: a sheet on top of this sheet (which System
-        // Settings hosts in another process) is fragile and can take the host down.
-        guard panel.runModal() == .OK else { return }
-        var imported = settings.importedCourses
-        var lastID: String?
-        var failures: [String] = []
-        for url in panel.urls {
-            do {
-                let data = try Data(contentsOf: url)
-                let course = try GPXImporter.course(fromGPX: data, fileName: url.lastPathComponent)
-                imported.removeAll { $0.id == course.id }
-                imported.append(course)
-                lastID = course.id
-            } catch {
-                failures.append("\(url.lastPathComponent): \(error.localizedDescription)")
-            }
-        }
-        settings.importedCourses = imported
-        if let lastID {
-            // Tick the new course alongside whatever was already ticked.
-            var ids = CourseLibrary.selectedIDs(config.selection, settings: settings)
-            ids.insert(lastID)
-            config.selection = "ids:" + ids.joined(separator: ",")
-        }
-        rebuildCourseList()
-        changed()
-        if !failures.isEmpty {
-            let alert = NSAlert()
-            alert.messageText = "Some files couldn't be imported"
-            alert.informativeText = failures.joined(separator: "\n")
-            alert.runModal()
-        }
-    }
-
-    @objc private func removeImported(_ sender: NSButton) {
-        guard let id = sender.identifier?.rawValue else { return }
-        settings.importedCourses = settings.importedCourses.filter { $0.id != id }
-        var ids = CourseLibrary.selectedIDs(config.selection, settings: settings)
-        ids.remove(id)
-        config.selection = "ids:" + ids.joined(separator: ",")
-        rebuildCourseList()
-        changed()
     }
 
     @objc private func restoreDefaults() {

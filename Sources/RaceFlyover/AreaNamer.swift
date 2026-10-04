@@ -82,3 +82,7 @@ final class AreaNamer {
         }
     }
 }
+
+extension String {
+    var nilIfEmpty: String? { isEmpty ? nil : self }
+}

@@ -31,7 +31,7 @@ minimap of the whole course, and the elevation profile along the bottom.*
 
 - **19 big-city marathons**, including all seven World Marathon Majors (Boston, London, Berlin,
   Chicago, New York, Tokyo and Sydney) plus Hong Kong, Kyoto, Amsterdam, Paris, Valencia, Los Angeles,
-  Houston, Mexico City, Osaka, Singapore, Taipei and Shanghai. You can also add your own race from a GPX file.
+  Houston, Mexico City, Osaka, Singapore, Taipei and Shanghai.
 - **Water and fuel stations** along the route, with the next ones always shown: what they hand out
   and how far away they are.
 - **Distance markers** every kilometre or mile, and a marker at halfway.
@@ -63,7 +63,7 @@ settings are grouped like the rest of System Settings:
 
 | Group | What you can change |
 |---|---|
-| **Courses** | Tick the races you want; they play one after another. Import your own race. Choose how long a full course takes, from a two-minute tour to a real-time four hours. |
+| **Courses** | Tick the races you want; they play one after another. Choose how long a full course takes, from a two-minute tour to a real-time four hours. |
 | **Camera** | Follow behind the runner, keep north at the top, or watch the whole course from above with a slow orbit. Adjust how steeply the camera looks down and how close it sits, or let it adjust the tilt automatically to how built-up each area is. |
 | **Appearance** | Fly over Apple Maps (satellite or street map, with optional 3D buildings), or one of five drawn looks: Midnight, Neon Grid, Daylight, Blueprint and Minimal Mono. Choose the pin's style (glass or solid), size and colour, and the trail's colour and thickness. |
 | **Overlay** | Show all the information panels, just the essentials, or nothing. Solid panels or Apple's Liquid Glass, light or dark to match the look you picked rather than your Mac's appearance. Kilometres or miles. Pick a typeface and text size. |
@@ -121,10 +121,9 @@ To try it in a window first, run `./build.sh preview`. `./build.sh release` make
 attached to a release. In the preview window, the Space bar pauses,
 the left and right arrows jump a kilometre, and **N** skips to the next course.
 
-**Adding your own race:** in Options, open **Courses** and click **Import GPX…**. Most race websites
-and running apps can export a course as a GPX file. If the file includes points named "water", "aid",
-"gel" or "food", they become stations. You can also drop GPX files into the `Courses` folder of this
-project and run `./build.sh install` again.
+**Adding a race:** races are prepared with `tools/build_courses.py`, which adds the stations,
+landmarks, flag and building information each course needs. Add the race to the list in that file
+and run it, then `./build.sh install`.
 
 ## Notes
 
