@@ -337,6 +337,7 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
     /// Gives MapKit's Metal layer a real size and scale if the host left them zeroed.
     private func healSurface() {
         let scale = backingScale
+        var collapsed = false
         for layer in metalLayers {
             let b = layer.bounds.size
             guard b.width > 1, b.height > 1 else { continue }
@@ -344,7 +345,7 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
             if layer.contentsScale != scale { layer.contentsScale = scale }
             let have = layer.drawableSize
             if have.width < 1 || have.height < 1 {
-                zeroDrawableFrames += 1
+                collapsed = true
                 layer.drawableSize = want
                 healCount += 1
             } else if abs(have.width - want.width) > 2 || abs(have.height - want.height) > 2 {
@@ -352,7 +353,10 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
                 healCount += 1
             }
         }
-        // If the surface keeps collapsing, or MapKit never loads, give up on the live map.
+        // Count frames in a row: MapKit briefly rebuilds its surface while the
+        // camera swoops, which is harmless; a surface that stays collapsed isn't.
+        zeroDrawableFrames = collapsed ? zeroDrawableFrames + 1 : 0
+        // If the surface stays collapsed (~3 s), or MapKit never loads, give up on the live map.
         let age = CACurrentMediaTime() - createdAt
         if !failed && ((zeroDrawableFrames > 90 && age > 6) || (!loaded && age > 15)) {
             failed = true
@@ -566,9 +570,11 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         Self.log.notice("map finished loading")
     }
 
+    /// Usually a brief network hiccup while fetching new map data (a lost
+    /// connection, a bad server reply): MapKit retries as the camera moves, so
+    /// keep the 3D map. A map that never loads at all is caught in `healSurface`.
     func mapViewDidFailLoadingMap(_ mapView: MKMapView, withError error: Error) {
-        Self.log.error("map failed loading: \(error.localizedDescription, privacy: .public)")
-        if !failed { failed = true; onFailure?() }
+        Self.log.error("map failed loading (keeping the live map; MapKit retries): \(error.localizedDescription, privacy: .public)")
     }
 
     func mapViewDidFinishRenderingMap(_ mapView: MKMapView, fullyRendered: Bool) {

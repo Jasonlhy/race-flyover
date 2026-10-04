@@ -41,6 +41,11 @@ public final class RaceFlyoverView: ScreenSaverView {
     private var lastLinkTick: CFTimeInterval = 0
     /// Set if the live 3D map can't draw in this host; map styles then use flat imagery.
     private var liveFailed = false
+    /// Flat imagery chosen on purpose (preview snapshots), so never retry the live map.
+    private var flatForced = false
+    /// Times the live map has been tried again after falling back (at a new course).
+    private var liveRetries = 0
+    private var lastCourseID: String?
     /// Set if Apple Maps couldn't produce imagery at all; map styles then use Midnight.
     private var mapFailed = false
     private var sheetController: ConfigSheetController?
@@ -78,6 +83,7 @@ public final class RaceFlyoverView: ScreenSaverView {
     /// Uses the flat Apple Maps imagery instead of the live map (snapshots: the
     /// live map's Metal surface can't be captured).
     func useFlatMapImagery() {
+        flatForced = true
         liveFailed = true
         installContent()
     }
@@ -171,6 +177,7 @@ public final class RaceFlyoverView: ScreenSaverView {
                 let v = MapFlyoverView(frame: bounds)
                 v.autoresizingMask = [.width, .height]
                 v.onFailure = { [weak self] in
+                    MapFlyoverView.log.notice("using flat imagery until the next course")
                     self?.liveFailed = true
                     self?.installContent()
                 }
@@ -339,6 +346,7 @@ public final class RaceFlyoverView: ScreenSaverView {
         FrameStats.shared = stats
         if dt > 0 { stats.frame(interval: dt) }
         if !paused { engine?.step(min(0.25, dt)) }
+        retryLiveMapIfNewCourse()
         if let leader = leader, let lead = leader.engine, let engine {
             engine.sync(to: lead, lag: time - leader.lastTick)
         }
@@ -346,6 +354,18 @@ public final class RaceFlyoverView: ScreenSaverView {
         adaptFrameRate(at: time)
         let screen = window?.screen.map { ($0 == NSScreen.screens.first ? "main:" : "") + $0.localizedName } ?? "?"
         stats.reportIfDue(label: "view#\(serial) [\(screen)\(leader == nil ? "" : ", following #\(leader!.serial)")] \(config.style.rawValue)\(config.map3D ? "" : "-flat") \(Int(targetFPS))fps-target \(Int(bounds.width))x\(Int(bounds.height))")
+    }
+
+    /// After falling back to flat imagery, give the 3D map another go when the
+    /// next course starts (the problem is often passing), a few times at most.
+    private func retryLiveMapIfNewCourse() {
+        let id = engine?.course.id
+        defer { lastCourseID = id }
+        guard id != lastCourseID, lastCourseID != nil, liveFailed, !flatForced, liveRetries < 3 else { return }
+        liveRetries += 1
+        liveFailed = false
+        MapFlyoverView.log.notice("new course: trying the live 3D map again (retry \(self.liveRetries, privacy: .public))")
+        installContent()
     }
 
     /// When the option is on: a steady 30 fps looks smoother than an uneven 40,
