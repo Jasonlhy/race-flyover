@@ -568,15 +568,13 @@ struct HUDRenderer {
         let lift = (1 - alpha) * 18 * s
         let card = CGRect(x: (size.width - contentWidth) / 2 - 56 * s, y: (size.height - contentHeight) / 2 - 40 * s + lift,
                           width: contentWidth + 112 * s, height: contentHeight + 80 * s).integral
-        if let glass {
-            glass.panels.append(GlassPanel(rect: card, radius: 32 * s, alpha: alpha))
-        } else {
-            Draw.roundedRect(ctx, card, radius: 28 * s, fill: theme.panel.withAlphaComponent(min(1, theme.panel.alphaComponent + 0.15)),
-                             stroke: theme.text.withAlphaComponent(0.1))
-        }
+        // The scene behind is blurred while the card shows, so a light tint is
+        // enough to read as frosted glass (a glass panel would be blurred too).
+        Draw.roundedRect(ctx, card, radius: 30 * s, fill: theme.panel.withAlphaComponent(theme.panel.alphaComponent * 0.6),
+                         stroke: theme.text.withAlphaComponent(0.14))
         frames?.add(.card, card.insetBy(dx: -20 * s, dy: -20 * s))
         var y = card.minY + 40 * s
-        Draw.medal(ctx, centreX: size.width / 2, top: y, radius: r, ribbon: theme.accent, title: "FINISH",
+        Draw.medal(ctx, centreX: size.width / 2, top: y, radius: r, ribbon: theme.accent, title: "FINISHER",
                    subtitle: units.format(km: course.data.distanceKm, decimals: units == .km ? 3 : 1).uppercased())
         y += emblemHeight + gap
         y += Draw.string(name, at: CGPoint(x: size.width / 2, y: y), anchor: 0.5).height + lineGap

@@ -13,6 +13,17 @@ final class HUDOverlayView: NSView {
 
     private var parts: [HUDPart: HUDPartView] = [:]
     private let fadeLayer = CALayer()
+    /// Blurs everything beneath the finish card (map, route, pin and the other
+    /// panels) so only the card stays sharp.
+    private let finishBlur: NSVisualEffectView = {
+        let v = NSVisualEffectView()
+        v.blendingMode = .withinWindow
+        v.material = .hudWindow
+        v.state = .active
+        v.alphaValue = 0
+        v.isHidden = true
+        return v
+    }()
 
     /// Panel positions recorded during the last draw, for the glass layer.
     var glassPanels: [GlassPanel] {
@@ -29,6 +40,9 @@ final class HUDOverlayView: NSView {
         fadeLayer.zPosition = 10
         fadeLayer.actions = ["opacity": NSNull(), "bounds": NSNull(), "position": NSNull()]
         layer?.addSublayer(fadeLayer)
+        finishBlur.frame = bounds
+        finishBlur.autoresizingMask = [.width, .height]
+        addSubview(finishBlur)
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
@@ -65,11 +79,36 @@ final class HUDOverlayView: NSView {
                 : nil
             view.setNeedsRedraw(signature: signature)
         }
+        updateFinishBlur(engine)
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         fadeLayer.frame = bounds
         fadeLayer.opacity = Float(engine.fade)
         CATransaction.commit()
+    }
+
+    private func updateFinishBlur(_ engine: FlyoverEngine) {
+        // Blurs in with the card, then stays until the fade to black, so the
+        // scene doesn't sharpen again for a moment as the card fades out.
+        var amount: CGFloat = 0
+        if !isThumbnail {
+            switch engine.phase {
+            case .finish: amount = CGFloat(ramp(engine.phaseTime, 0.4, 1.2))
+            case .fadeOut: amount = 1
+            default: amount = 0
+            }
+        }
+        finishBlur.isHidden = amount < 0.01
+        guard !finishBlur.isHidden else { return }
+        finishBlur.appearance = NSAppearance(named: theme.isLight ? .aqua : .darkAqua)
+        finishBlur.alphaValue = amount
+        // The card on top, the blur directly under it, every other panel beneath.
+        guard let card = parts[.card] else { return }
+        let n = subviews.count
+        if subviews.last !== card || n < 2 || subviews[n - 2] !== finishBlur {
+            addSubview(card, positioned: .above, relativeTo: nil)
+            addSubview(finishBlur, positioned: .below, relativeTo: card)
+        }
     }
 
     private func makePart(_ part: HUDPart) -> HUDPartView {

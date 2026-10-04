@@ -361,6 +361,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         applyOverrides(saver)
         window.contentView = saver
         window.makeKeyAndOrderFront(nil)
+        // For capturing just this window: screencapture -l <number>
+        print("window \(window.windowNumber)")
+        fflush(stdout)
         saver.startAnimation()
         scheduleTimer()
         if let p = option("--progress").flatMap(Double.init) {

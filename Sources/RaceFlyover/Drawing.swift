@@ -227,31 +227,64 @@ enum Draw {
         ctx.setStrokeColor(Theme.hex(0x9C7015, 0.45).cgColor)
         ctx.strokeEllipse(in: face.insetBy(dx: r * 0.08, dy: r * 0.08))
 
-        // Laurel sprigs curving up both sides of the face.
-        ctx.setFillColor(Theme.hex(0x9C7015, 0.75).cgColor)
+        // Laurel wreath: two sprigs curving up from the bottom around the centre.
+        let engraved = Theme.hex(0x6B4A0E)
+        ctx.setFillColor(Theme.hex(0x9C7015, 0.8).cgColor)
+        ctx.setStrokeColor(Theme.hex(0x9C7015, 0.8).cgColor)
+        ctx.setLineWidth(max(1, r * 0.018))
         for side in [-1.0, 1.0] as [CGFloat] {
-            for k in 0..<6 {
-                let a = (CGFloat.pi / 2) + side * (0.45 + CGFloat(k) * 0.24)   // from the bottom, round each side
-                let p = CGPoint(x: c.x + cos(a) * r * 0.62, y: c.y + sin(a) * r * 0.62)
-                ctx.saveGState()
-                ctx.translateBy(x: p.x, y: p.y)
-                ctx.rotate(by: a + side * 1.2)
-                ctx.fillEllipse(in: CGRect(x: -r * 0.085, y: -r * 0.035, width: r * 0.17, height: r * 0.07))
-                ctx.restoreGState()
+            ctx.addArc(center: c, radius: r * 0.55, startAngle: .pi / 2 + side * 0.2, endAngle: .pi / 2 + side * 1.75,
+                       clockwise: side < 0)
+            ctx.strokePath()
+            for k in 0..<7 {
+                let a = (CGFloat.pi / 2) + side * (0.32 + CGFloat(k) * 0.22)
+                for offset in [-1.0, 1.0] as [CGFloat] {   // a leaf either side of the stem
+                    let p = CGPoint(x: c.x + cos(a) * r * (0.55 + offset * 0.045), y: c.y + sin(a) * r * (0.55 + offset * 0.045))
+                    ctx.saveGState()
+                    ctx.translateBy(x: p.x, y: p.y)
+                    ctx.rotate(by: a + side * (.pi / 2 - offset * 0.5))
+                    ctx.fillEllipse(in: CGRect(x: -r * 0.075, y: -r * 0.028, width: r * 0.15, height: r * 0.056))
+                    ctx.restoreGState()
+                }
             }
         }
 
-        // Lettering struck into the face (a light edge below reads as engraved).
-        let engraved = Theme.hex(0x6B4A0E)
-        let titleText = text(title, size: r * 0.26, weight: .black, color: engraved, tracking: r * 0.025)
-        let highlight = text(title, size: r * 0.26, weight: .black, color: NSColor(white: 1, alpha: 0.45), tracking: r * 0.025)
-        let ts = titleText.size()
-        let ty = c.y - ts.height * 0.62
-        highlight.draw(at: CGPoint(x: c.x - ts.width / 2, y: ty + max(1, r * 0.012)))
-        titleText.draw(at: CGPoint(x: c.x - ts.width / 2, y: ty))
-        let sub = text(subtitle, size: r * 0.12, weight: .bold, color: engraved, tracking: r * 0.02)
-        let ss = sub.size()
-        sub.draw(at: CGPoint(x: c.x - ss.width / 2, y: ty + ts.height * 0.92))
+        // Lettering struck into the face, in classical capitals: the title
+        // arched around the top inside the rim, the distance large in the
+        // centre. A light edge below each letter reads as engraved.
+        func classical(_ size: CGFloat) -> NSFont {
+            NSFont(name: "Optima-ExtraBlack", size: size) ?? .systemFont(ofSize: size, weight: .black)
+        }
+        func engrave(_ string: String, font: NSFont, kern: CGFloat, at p: CGPoint) {
+            for (color, dy) in [(NSColor(white: 1, alpha: 0.45), max(1, r * 0.012)), (engraved, 0)] {
+                let t = NSAttributedString(string: string, attributes: [.font: font, .foregroundColor: color, .kern: kern])
+                let size = t.size()
+                t.draw(at: CGPoint(x: p.x - size.width / 2, y: p.y - size.height / 2 + dy))
+            }
+        }
+        // Arched title: each letter placed and turned along a circle.
+        let arcFont = classical(r * 0.2)
+        let arcRadius = r * 0.66
+        let spacing = r * 0.035
+        let letters = title.map { String($0) }
+        let widths = letters.map { NSAttributedString(string: $0, attributes: [.font: arcFont]).size().width + spacing }
+        let sweep = widths.reduce(0, +) / arcRadius
+        var angle = -CGFloat.pi / 2 - sweep / 2
+        for (letter, w) in zip(letters, widths) {
+            let mid = angle + (w / 2) / arcRadius
+            ctx.saveGState()
+            ctx.translateBy(x: c.x + cos(mid) * arcRadius, y: c.y + sin(mid) * arcRadius)
+            ctx.rotate(by: mid + .pi / 2)
+            engrave(letter, font: arcFont, kern: 0, at: .zero)
+            ctx.restoreGState()
+            angle += w / arcRadius
+        }
+        // Distance in the centre: the number large, the unit small beneath.
+        let parts = subtitle.split(separator: " ").map(String.init)
+        let number = parts.first ?? subtitle
+        let unit = parts.dropFirst().joined(separator: " ")
+        engrave(number, font: classical(r * (number.count > 5 ? 0.245 : 0.34)), kern: r * 0.005, at: CGPoint(x: c.x, y: c.y + r * 0.02))
+        if !unit.isEmpty { engrave(unit, font: classical(r * 0.11), kern: r * 0.03, at: CGPoint(x: c.x, y: c.y + r * 0.27)) }
 
         // Shine across the upper left.
         ctx.saveGState()
