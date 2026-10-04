@@ -29,9 +29,9 @@ minimap of the whole course, and the elevation profile along the bottom.*
 
 ## What you'll see
 
-- **18 big-city marathons**, including all seven World Marathon Majors (Boston, London, Berlin,
-  Chicago, New York, Tokyo and Sydney) plus Kyoto, Amsterdam, Paris, Valencia, Los Angeles, Houston,
-  Mexico City, Osaka, Singapore, Taipei and Shanghai. You can also add your own race from a GPX file.
+- **19 big-city marathons**, including all seven World Marathon Majors (Boston, London, Berlin,
+  Chicago, New York, Tokyo and Sydney) plus Hong Kong, Kyoto, Amsterdam, Paris, Valencia, Los Angeles,
+  Houston, Mexico City, Osaka, Singapore, Taipei and Shanghai. You can also add your own race from a GPX file.
 - **Water and fuel stations** along the route, with the next ones always shown: what they hand out
   and how far away they are.
 - **Distance markers** every kilometre or mile, and a marker at halfway.
@@ -68,7 +68,7 @@ settings are grouped like the rest of System Settings:
 | **Appearance** | Fly over Apple Maps (satellite or street map, with optional 3D buildings), or one of five drawn looks: Midnight, Neon Grid, Daylight, Blueprint and Minimal Mono. Choose the pin's style (glass or solid), size and colour, and the trail's colour and thickness. |
 | **Overlay** | Show all the information panels, just the essentials, or nothing. Solid panels or Apple's Liquid Glass, light or dark to match the look you picked rather than your Mac's appearance. Kilometres or miles. Pick a typeface and text size. |
 | **On the Route** | Turn water stations, fuel stations, distance markers, the passing pulse and landmarks on or off. Choose where the runner slows down for a closer look: nowhere, landmarks, landmarks and stations, or all of those plus distance markers. |
-| **Performance** | Choose what happens on multiple screens and set the frame rate. |
+| **Performance** | Choose what happens on multiple screens and set the frame rate, and whether a screen that can't keep up 60 fps should drop to a steady 30. |
 
 ## What you need
 
@@ -104,7 +104,8 @@ are remembered so each course only needs looking up once.
    ```
 
 3. Open **System Settings › Screen Saver**, scroll down to **Other**, and choose **Race Flyover**.
-4. Click **Options…** to pick your courses and style.
+4. Click **Options…** to pick your courses and style. The version you're running is shown at the bottom
+   left of Options.
 
 To try it in a window first, run `./build.sh preview`. In the preview window, the Space bar pauses,
 the left and right arrows jump a kilometre, and **N** skips to the next course.
@@ -134,7 +135,9 @@ before race day.
 [OpenStreetMap](https://www.openstreetmap.org/copyright). Most routes and stations come from the community collection
 [distanzrunning/gpx](https://github.com/distanzrunning/gpx), which doesn't state a licence. Kyoto's
 route comes from [GoAndRace](https://www.goandrace.com/en/map/2025/kyoto-marathon-2025-kyoto-course-map-1.php)
-and its stations from the official 2025 runner guide. Please keep this project for personal use.
+and its stations from the official 2025 runner guide. Hong Kong's route (2025 edition) also comes from
+[GoAndRace](https://www.goandrace.com/en/map/2025/standard-chartered-hong-kong-marathon-2025-course-map-1.php);
+its stations are estimated. Please keep this project for personal use.
 
 **For tinkerers.** `tools/build_courses.py` rebuilds the course files, and the preview app can save
 still pictures and short animations of any course; the options are listed at the top of

@@ -37,11 +37,24 @@ copy_courses() { # $1 resources dir
   fi
 }
 
-echo "› Building screensaver"
+# Version shown in Options: the release tag when building one (v1.0.0), else the
+# commit (a36342a), with "-dirty" if there are uncommitted changes.
+VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo dev)
+BUILD_NUMBER=$(git rev-list --count HEAD 2>/dev/null || echo 1)
+stamp_version() { # $1 Info.plist
+  plutil -replace RaceFlyoverVersion -string "$VERSION" "$1"
+  plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$1"
+  local tag=$(git describe --tags --abbrev=0 2>/dev/null || true)
+  [[ -n "$tag" ]] && plutil -replace CFBundleShortVersionString -string "${tag#v}" "$1"
+  return 0
+}
+
+echo "› Building screensaver ($VERSION)"
 rm -rf "$SAVER"
 mkdir -p "$SAVER/Contents/MacOS" "$SAVER/Contents/Resources"
 compile "$SAVER/Contents/MacOS/RaceFlyover" RaceFlyover -parse-as-library -Xlinker -bundle "${SOURCES[@]}"
 cp Resources/Info.plist "$SAVER/Contents/Info.plist"
+stamp_version "$SAVER/Contents/Info.plist"
 copy_courses "$SAVER/Contents/Resources"
 codesign --force --sign - "$SAVER" 2>/dev/null
 
@@ -54,6 +67,7 @@ sed -e 's/<string>RaceFlyover<\/string>/<string>RaceFlyoverPreview<\/string>/' \
     -e 's/<string>BNDL<\/string>/<string>APPL<\/string>/' \
     -e 's/<string>Race Flyover<\/string>/<string>Race Flyover Preview<\/string>/g' \
     Resources/Info.plist > "$APP/Contents/Info.plist"
+stamp_version "$APP/Contents/Info.plist"
 copy_courses "$APP/Contents/Resources"
 codesign --force --sign - "$APP" 2>/dev/null
 

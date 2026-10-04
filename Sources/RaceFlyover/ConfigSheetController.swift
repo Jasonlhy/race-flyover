@@ -171,10 +171,20 @@ final class ConfigSheetController: NSObject {
         sidebarBackground.blendingMode = .behindWindow
         sidebarBackground.addSubview(sidebar)
         sidebar.translatesAutoresizingMaskIntoConstraints = false
+        // Build version (release tag or git commit), bottom left.
+        let info = Bundle(for: ConfigSheetController.self).infoDictionary
+        let versionLabel = NSTextField(labelWithString: "Version \(info?["RaceFlyoverVersion"] as? String ?? info?["CFBundleShortVersionString"] as? String ?? "?")")
+        versionLabel.font = .systemFont(ofSize: 11)
+        versionLabel.textColor = .tertiaryLabelColor
+        versionLabel.isSelectable = true
+        versionLabel.translatesAutoresizingMaskIntoConstraints = false
+        sidebarBackground.addSubview(versionLabel)
         NSLayoutConstraint.activate([
             sidebar.topAnchor.constraint(equalTo: sidebarBackground.topAnchor),
             sidebar.leadingAnchor.constraint(equalTo: sidebarBackground.leadingAnchor),
             sidebarBackground.widthAnchor.constraint(equalToConstant: 200),
+            versionLabel.leadingAnchor.constraint(equalTo: sidebarBackground.leadingAnchor, constant: 22),
+            versionLabel.bottomAnchor.constraint(equalTo: sidebarBackground.bottomAnchor, constant: -18),
         ])
 
         // Pages

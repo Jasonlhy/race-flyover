@@ -80,6 +80,15 @@ COURSES = [
      "city": "Singapore", "month": "December"},
     {"id": "taipei", "country": "TW", "file": "taipei_marathon.json", "name": "Taipei Marathon",
      "city": "Taipei, Taiwan", "month": "December"},
+    {"id": "hongkong", "landmarks": ['Kowloon Park', 'Stonecutters Bridge', 'Ting Kau Bridge', 'Tsing Ma Bridge',
+                                     'International Commerce Centre', 'Hong Kong Observation Wheel',
+                                     'Hong Kong Convention and Exhibition Centre'],
+     "country": "HK", "name": "Hong Kong Marathon", "file": "hong_kong_marathon.gpx",
+     "url": "https://www.goandrace.com/gpx/2025/02/09/gpx_20250209_id10104_race1_20241228183330.gpx",
+     "city": "Tsim Sha Tsui → Victoria Park, Hong Kong", "month": "January",
+     # The source heights follow the sea under Stonecutters Bridge (deck ~73 m)
+     # and over the Western Harbour Crossing (tunnel ~25 m below sea level).
+     "bridges": [(9.45, 11.95, 73), (33.7, 35.45, -25)]},
     {"id": "kyoto", "landmarks": ['Togetsukyo Bridge', 'Ninna-ji', 'Ryoan-ji', 'Kamigamo Shrine', 'Kyoto Botanical Gardens', 'Kyoto City Hall', 'Heian Shrine'], "country": "JP", "name": "Kyoto Marathon",
      "file": "kyoto_marathon.gpx",
      "url": "https://www.goandrace.com/gpx/2025/02/16/gpx_20250216_id10116_race1_20250111195530.gpx",
