@@ -25,7 +25,7 @@ minimap of the whole course, and the elevation profile along the bottom.*
 | ![Tokyo Marathon in the Neon Grid look](docs/screenshots/neon-tokyo.jpg) | ![Kyoto Marathon title card in the Blueprint look](docs/screenshots/intro-kyoto.jpg) |
 | **Tokyo** · the Neon Grid look | **Kyoto** · each course opens with a title card |
 | ![Chicago Marathon finish card](docs/screenshots/finish-chicago.jpg) | ![Settings: choosing courses](docs/screenshots/settings-courses.jpg) |
-| **Chicago** · and closes with a finisher's medal | **Settings** · pick exactly which races to fly |
+| **Chicago** · and closes with a finisher's medal, everything behind it blurred | **Settings** · pick exactly which races to fly |
 
 ## What you'll see
 
