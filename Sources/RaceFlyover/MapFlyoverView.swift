@@ -155,17 +155,17 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         let landmarks = config.showLandmarks ? LandmarkStore.shared.landmarks(for: course) : []
         let key = "\(course.id)|\(config.showFluid)|\(config.showFuel)|\(config.showMarkers)|\(config.units)|\(config.typeface)|\(appliedStyle ?? "")|\(landmarks.count)"
         if key != builtKey { rebuild(course, config: config, key: key) }
-        updateRouteWidth(cameraDistance: engine.camera.distance, config: config)
-
         let cam = engine.camera
         let camera = MKMapCamera(lookingAtCenter: cam.coordinate, fromDistance: cam.distance,
                                  pitch: CGFloat(cam.tilt * 180 / .pi), heading: cam.heading * 180 / .pi)
         map.setCamera(camera, animated: false)
+        let projection = makeProjection(course: course, distance: engine.distance)
+        updateRouteWidth(cameraDistance: engine.camera.distance, config: config, projection: projection)
         FrameStats.shared.measure("trail") {
             updateCovered(distance: engine.distance)
-            drawGhost(course: course, distance: engine.distance)
+            drawGhost(course: course, distance: engine.distance, projection: projection)
         }
-        placePin(course: course, distance: engine.distance)
+        placePin(course: course, distance: engine.distance, projection: projection)
 
         healSurface()
         diagnose()
@@ -287,7 +287,7 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         }
     }
 
-    private func placePin(course: Course, distance: Double) {
+    private func placePin(course: Course, distance: Double, projection: FrameProjection?) {
         let config = engine?.config
         let key = "\(theme.runner)|\(config?.pinSize.rawValue ?? "")|\(config?.pinStyle.usesGlass ?? false)|\(theme.isLight)"
         if pinKey != key {
@@ -295,9 +295,8 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
             pinColor = theme.runner
             buildPin()
         }
-        let coordinate = course.sample(at: distance).coordinate
-        // Same camera MapKit just received, so the pin lands exactly on the route.
-        let p = map.convert(coordinate, toPointTo: self)
+        // Matched to the map as it's shown, so the pin lands exactly on the route.
+        let p = projection?.pin ?? map.convert(course.sample(at: distance).coordinate, toPointTo: self)
         let onScreen = p.x.isFinite && p.y.isFinite && bounds.insetBy(dx: -60, dy: -60).contains(p)
         // Lie flat on the ground: foreshorten by the map's actual pitch (MapKit may
         // cap it), and lift the white top above the base to show its thickness.
@@ -432,10 +431,30 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
 
     /// Thicker route when zoomed in (and per the option); only re-renders when it
     /// changes noticeably, e.g. during the intro swoop, not every frame.
-    private func updateRouteWidth(cameraDistance: Double, config: Config) {
-        let w = PathWidth.zoomFactor(cameraDistance: cameraDistance) * config.pathWidth.scale
-        guard abs(w - routeWidth) / routeWidth > 0.08 else { return }
-        routeWidth = w
+    /// Metres on the ground per screen point at the runner, for the route's width.
+    private var metresPerPoint = 1.0
+    private var appliedWidth = 0.0
+
+    /// The route inside the map has a width in metres, like a painted road:
+    /// MapKit draws it in tiles at several levels of detail (nearer tiles finer
+    /// when tilted), and a width in screen points came out a different
+    /// thickness on each, with steps and breaks where tiles met. A width on the
+    /// ground is the same in every tile, and narrows smoothly into the
+    /// distance. It's chosen to look the set thickness at the runner, and
+    /// only re-applied when the zoom changes noticeably (redrawing every tile).
+    private func updateRouteWidth(cameraDistance: Double, config: Config, projection: FrameProjection?) {
+        routeWidth = PathWidth.zoomFactor(cameraDistance: cameraDistance) * config.pathWidth.scale
+        if let proj = projection, let a = proj.ground.apply(0, 0) {
+            let h = map.camera.heading * .pi / 180
+            // Across the view (no foreshortening): 10 m to the side of the runner.
+            if let b = proj.ground.apply(cos(h) * 10, -sin(h) * 10) {
+                let points = hypot(b.x - a.x, b.y - a.y)
+                if points > 0.5 { metresPerPoint = 10 / Double(points) }
+            }
+        }
+        let width = Double(routeWidth) * metresPerPoint
+        guard appliedWidth == 0 || abs(width - appliedWidth) / appliedWidth > 0.12 else { return }
+        appliedWidth = width
         if let r = routeRenderer {
             applyWidths(r)
             r.setNeedsDisplay()
@@ -443,9 +462,10 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
     }
 
     private func applyWidths(_ r: RouteRenderer) {
-        r.aheadWidth = Self.aheadWidth * routeWidth
-        r.coreWidth = Self.coreWidth * routeWidth
-        r.casingWidth = Self.casingWidth * routeWidth
+        let w = CGFloat(appliedWidth > 0 ? appliedWidth : Double(routeWidth) * metresPerPoint)
+        r.aheadWidth = Self.aheadWidth * w
+        r.coreWidth = Self.coreWidth * w
+        r.casingWidth = Self.casingWidth * w
     }
 
     /// Moves the end of the covered route to the runner, about ten times a
@@ -455,9 +475,8 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         let now = CACurrentMediaTime()
         guard now - lastCoveredUpdate >= 0.1 else { return }
         lastCoveredUpdate = now
-        // Widest line, in map points at the current zoom, with room to spare.
-        let pointsPerScreenPoint = map.visibleMapRect.size.width / Double(max(1, map.bounds.width))
-        r.setCovered(route.mapLength(atTraced: distance), padding: Double(Self.casingWidth * routeWidth) * pointsPerScreenPoint * 2)
+        // Widest line (metres → map points), with room to spare.
+        r.setCovered(route.mapLength(atTraced: distance), padding: Double(r.casingWidth) * r.mapPointsPerMetre * 2)
     }
 
     private static let aheadWidth: CGFloat = 8
@@ -478,7 +497,25 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
     /// through a plane-to-screen transform fitted to four points MapKit projects
     /// around the runner (exact for flat ground, and far cheaper than asking
     /// MapKit for every point).
-    private func drawGhost(course: Course, distance: Double) {
+    /// Where things go on screen this frame, matched to the map you actually
+    /// see. MapKit shows a new camera about one screen refresh (~25 ms) after
+    /// it's set, while our layers show their positions at once; with the
+    /// camera moving, the map then lags the pin, so the road and the route
+    /// look ahead of it and, on bends, off to one side. So positions are taken
+    /// that same refresh earlier: blended between this frame and the last.
+    private struct FrameProjection {
+        let here: CourseSample
+        /// Ground (metres from the runner) to screen, as the map is shown.
+        let ground: Homography
+        /// The runner's spot, as the map is shown.
+        let pin: CGPoint
+    }
+
+    /// How late MapKit shows a camera change, in seconds (measured: a little more than a 60 Hz refresh).
+    private static let mapLatency = 0.025
+    private var previous: (ground: Homography, pin: CGPoint, time: Double, origin: SIMD2<Double>)?
+
+    private func makeProjection(course: Course, distance: Double) -> FrameProjection? {
         let here = course.sample(at: distance)
         let reach = max(60, map.camera.centerCoordinateDistance * 0.2)
         let h = map.camera.heading * .pi / 180
@@ -489,24 +526,46 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
             let c = course.coordinate(x: here.x + r.0, y: here.y + r.1)
             return map.convert(CLLocationCoordinate2D(latitude: c.lat, longitude: c.lon), toPointTo: self)
         }
-        guard screen.allSatisfy({ $0.x.isFinite && $0.y.isFinite }),
-              let H = Homography(from: refs, to: screen.map { (Double($0.x), Double($0.y)) }) else {
+        let pinNow = map.convert(here.coordinate, toPointTo: self)
+        guard screen.allSatisfy({ $0.x.isFinite && $0.y.isFinite }), pinNow.x.isFinite, pinNow.y.isFinite,
+              let now = Homography(from: refs, to: screen.map { (Double($0.x), Double($0.y)) }) else {
+            previous = nil
+            return nil
+        }
+        let time = CACurrentMediaTime()
+        let origin = SIMD2(here.x, here.y)
+        defer { previous = (now, pinNow, time, origin) }
+        guard let prev = previous, time > prev.time, time - prev.time < 0.25 else {
+            return FrameProjection(here: here, ground: now, pin: pinNow)
+        }
+        // Blend towards the last frame by the share of a frame MapKit is behind.
+        let lag = min(1, Self.mapLatency / (time - prev.time))
+        // The last frame's mapping, re-based on this frame's runner position.
+        let shift = origin - prev.origin
+        let prevHere = prev.ground.shifted(by: shift.x, shift.y)
+        let pin = CGPoint(x: pinNow.x + (prev.pin.x - pinNow.x) * lag, y: pinNow.y + (prev.pin.y - pinNow.y) * lag)
+        return FrameProjection(here: here, ground: now.blended(with: prevHere, by: lag), pin: pin)
+    }
+
+    private func drawGhost(course: Course, distance: Double, projection: FrameProjection?) {
+        guard let proj = projection else {
             ghostDone.path = nil
             ghostAhead.path = nil
             return
         }
+        let here = proj.here
         // Only near the runner, where buildings get in the way and flat ground is
         // a close enough guess; further out the line would drift off the road.
         let radius = max(400, map.camera.centerCoordinateDistance * 1.5)
         let (index, _) = course.locate(distance)
-        let pin = map.convert(here.coordinate, toPointTo: self)
+        let pin = proj.pin
         func build(_ range: StrideThrough<Int>, endAtPin: Bool, startAtPin: Bool) -> CGPath {
             let path = CGMutablePath()
             var drawing = false
             if startAtPin { path.move(to: pin); drawing = true }
             for i in range {
                 let dx = course.x[i] - here.x, dy = course.y[i] - here.y
-                guard dx * dx + dy * dy < radius * radius, let p = H.apply(dx, dy) else { drawing = false; continue }
+                guard dx * dx + dy * dy < radius * radius, let p = proj.ground.apply(dx, dy) else { drawing = false; continue }
                 if drawing { path.addLine(to: p) } else { path.move(to: p); drawing = true }
             }
             if endAtPin && drawing { path.addLine(to: pin) }
@@ -614,7 +673,7 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
 
 /// Maps flat ground (metres east and north of a reference point) to the screen.
 private struct Homography {
-    private var m: [Double]   // row-major 3×3, m[8] = 1
+    fileprivate var m: [Double]   // row-major 3×3, m[8] = 1
 
     /// Fitted to four ground points and where they appear on screen.
     init?(from ground: [(Double, Double)], to screen: [(Double, Double)]) {
@@ -635,6 +694,27 @@ private struct Homography {
             }
         }
         m = (0..<8).map { a[$0][8] / a[$0][$0] } + [1]
+    }
+
+    /// The same mapping for points given relative to an origin moved by `(dx, dy)`.
+    func shifted(by dx: Double, _ dy: Double) -> Homography {
+        var h = self
+        // p' = p + d, so H' = H · T(d): the last column picks up H·(dx, dy, 0).
+        h.m[2] += m[0] * dx + m[1] * dy
+        h.m[5] += m[3] * dx + m[4] * dy
+        h.m[8] += m[6] * dx + m[7] * dy
+        let n = h.m[8]
+        for k in 0..<9 { h.m[k] /= n }
+        return h
+    }
+
+    /// A mapping part of the way (`t`, 0…1) towards `other`.
+    func blended(with other: Homography, by t: Double) -> Homography {
+        var h = self
+        for k in 0..<9 { h.m[k] = m[k] + (other.m[k] - m[k]) * t }
+        let n = h.m[8]
+        for k in 0..<9 { h.m[k] /= n }
+        return h
     }
 
     /// Screen point for a ground point, or nil if it's behind the camera.

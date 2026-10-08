@@ -71,10 +71,12 @@ final class RouteRenderer: MKOverlayRenderer {
     var aheadColor = NSColor.white.withAlphaComponent(0.55)
     var doneColor = NSColor.systemBlue
     var casingColor = NSColor.white.withAlphaComponent(0.92)
-    /// Line widths in screen points.
+    /// Line widths in metres on the ground (the same in every tile, whatever
+    /// its level of detail, so the line never steps in thickness).
     var aheadWidth: CGFloat = 8
     var coreWidth: CGFloat = 7.5
     var casingWidth: CGFloat = 10.5
+    var mapPointsPerMetre: Double { MKMapPointsPerMeterAtLatitude(route.coordinate.latitude) }
 
     init(route: RouteOverlay) {
         self.route = route
@@ -98,8 +100,8 @@ final class RouteRenderer: MKOverlayRenderer {
         lock.lock()
         let done = covered
         lock.unlock()
-        let scale = 1 / Double(zoomScale)            // map points per screen point
-        let pad = Double(casingWidth) * scale
+        let perMetre = mapPointsPerMetre
+        let pad = Double(casingWidth) * perMetre
         let area = mapRect.insetBy(dx: -pad, dy: -pad)
         let tunnels = route.underground
 
@@ -149,7 +151,7 @@ final class RouteRenderer: MKOverlayRenderer {
         ctx.setLineJoin(.round)
         func stroke(_ path: CGPath?, _ color: NSColor, _ width: CGFloat, dashed: Bool) {
             guard let path else { return }
-            let w = width / zoomScale
+            let w = width * CGFloat(perMetre)
             ctx.addPath(path)
             ctx.setStrokeColor(color.cgColor)
             ctx.setLineWidth(w)
