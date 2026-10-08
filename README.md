@@ -122,7 +122,7 @@ attached to a release. In the preview window, the Space bar pauses,
 the left and right arrows jump a kilometre, and **N** skips to the next course.
 
 **Adding a race:** races are prepared with `tools/build_courses.py`, which adds the stations,
-landmarks, flag and building information each course needs. Add the race to the list in that file
+landmarks and flag each course needs. Add the race to the list in that file
 and run it, then `./build.sh install`.
 
 ## Notes
