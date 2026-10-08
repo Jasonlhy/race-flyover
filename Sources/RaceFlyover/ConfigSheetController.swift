@@ -101,7 +101,7 @@ final class ConfigSheetController: NSObject {
                 section(nil, rows: [
                     row("Camera", control: cameraControl),
                     row("Tilt", detail: tiltLabel, control: tiltSlider),
-                    row("Automatic tilt", subtitle: "Steeper among buildings, lower in open areas", control: autoTiltCheck),
+                    row("Dynamic tilt", subtitle: "Top-down on long straights, low and tilted through bends", control: autoTiltCheck),
                     row("Zoom", detail: zoomLabel, control: zoomSlider),
                 ], footer: note("Chase follows the runner and turns with the road. North up never rotates. Overview shows the whole course with a slow orbit.")),
             ]),
@@ -574,8 +574,11 @@ final class ConfigSheetController: NSObject {
         let paceSeconds = minutes * 60 / (42.195 / config.units.kmPerUnit)
         lapLabel.stringValue = String(format: "Marathon in %@  ·  %d:%02d /%@ pace", duration,
                                       Int(paceSeconds) / 60, Int(paceSeconds) % 60, config.units.label)
-        tiltLabel.stringValue = String(format: "%.0f°  %@", config.tiltDegrees,
-                                       config.tiltDegrees < 15 ? "(top-down map)" : (config.tiltDegrees > 60 ? "(low flyover)" : ""))
+        let dynamicTilt = config.autoTilt && config.camera != .overview
+        tiltLabel.stringValue = dynamicTilt ? "Set by dynamic tilt"
+            : String(format: "%.0f°  %@", config.tiltDegrees,
+                     config.tiltDegrees < 15 ? "(top-down map)" : (config.tiltDegrees > 60 ? "(low flyover)" : ""))
+        tiltSlider.isEnabled = !dynamicTilt
         let d = config.cameraDistance
         zoomLabel.stringValue = d < 1000 ? String(format: "Camera %.0f m from runner", d)
                                          : String(format: "Camera %.1f km from runner", d / 1000)

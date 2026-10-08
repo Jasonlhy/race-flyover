@@ -234,7 +234,7 @@ struct Config: Equatable {
     var lapMinutes = 15.0             // time to fly the whole course
     var camera = CameraMode.chase
     var tiltDegrees = 66.0            // 0 = straight down
-    var autoTilt = true               // steeper among buildings, lower in open areas
+    var autoTilt = true               // dynamic tilt: top-down on long straights, low through bends
     var adaptiveFPS = false           // drop from 60 to a steady 30 fps if 60 can't be kept up
     var zoom = 0.42                   // 0 = street level, 1 = whole city
     var style = VisualStyle.midnight

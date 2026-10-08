@@ -49,8 +49,9 @@ minimap of the whole course, and the elevation profile along the bottom.*
   at stations and distance markers) while the camera frames the view. It pulls back for big sights
   such as parks, palaces and bridges, moves in close for statues, and sweeps slowly around so you
   get a proper look before the run picks up again.
-- **Automatic tilt**: the camera looks down more steeply where the streets are packed with
-  buildings, so they don't hide the route, and flies lower over parks, rivers and open roads.
+- **Dynamic tilt**: on long straight roads the camera rises to a more top-down view, so you see the
+  road stretch away; through bends and short blocks it drops into a low, tilted flyover, so every
+  turn reads clearly.
 - **A title card** at the start of each course, placed low on the screen so it never clashes with the
   clock macOS shows on the lock screen, and a **finisher's medal** in the middle of the screen at the end.
 
@@ -64,7 +65,7 @@ settings are grouped like the rest of System Settings:
 | Group | What you can change |
 |---|---|
 | **Courses** | Tick the races you want; they play one after another. Choose how long a full course takes, from a two-minute tour to a real-time four hours. |
-| **Camera** | Follow behind the runner, keep north at the top, or watch the whole course from above with a slow orbit. Adjust how steeply the camera looks down and how close it sits, or let it adjust the tilt automatically to how built-up each area is. |
+| **Camera** | Follow behind the runner, keep north at the top, or watch the whole course from above with a slow orbit. Adjust how steeply the camera looks down and how close it sits, or turn on dynamic tilt to let it choose: top-down on long straights, low and tilted through bends. |
 | **Appearance** | Fly over Apple Maps (satellite or street map, with optional 3D buildings), or one of five drawn looks: Midnight, Neon Grid, Daylight, Blueprint and Minimal Mono. Choose the pin's style (glass or solid), size and colour, and the trail's colour and thickness. |
 | **Overlay** | Show all the information panels, just the essentials, or nothing. Solid panels or Apple's Liquid Glass, light or dark to match the look you picked rather than your Mac's appearance. Kilometres or miles. Pick a typeface and text size. |
 | **On the Route** | Turn water stations, fuel stations, distance markers, the passing pulse and landmarks on or off. Choose where the runner slows down for a closer look: nowhere, landmarks, landmarks and stations, or all of those plus distance markers. |
@@ -81,8 +82,7 @@ settings are grouped like the rest of System Settings:
 ## How it works
 
 Each course is a list of points along the real race route, with the height of the ground at each
-point, the positions of the water and fuel stations, and how many buildings line each stretch
-(which is what the automatic tilt uses). Race Flyover moves a runner along those
+point and the positions of the water and fuel stations. Race Flyover moves a runner along those
 points at the speed you choose, and a virtual camera follows from behind and above, turning
 smoothly with the road.
 
@@ -141,8 +141,7 @@ routes change from year to year. Where a race didn't publish its stations, Race 
 every 5 km and says so on screen. Always check your race's official course map and runner guide
 before race day.
 
-**Where the course data comes from.** Building counts for the automatic tilt come from
-[OpenStreetMap](https://www.openstreetmap.org/copyright). Most routes and stations come from the community collection
+**Where the course data comes from.** Most routes and stations come from the community collection
 [distanzrunning/gpx](https://github.com/distanzrunning/gpx), which doesn't state a licence. Kyoto's
 route comes from [GoAndRace](https://www.goandrace.com/en/map/2025/kyoto-marathon-2025-kyoto-course-map-1.php)
 and its stations from the official 2025 runner guide. Hong Kong's route (2025 edition) also comes from

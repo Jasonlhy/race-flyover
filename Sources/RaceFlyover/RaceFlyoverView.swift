@@ -422,8 +422,25 @@ public final class RaceFlyoverView: ScreenSaverView {
     /// System Settings may ask for the sheet more than once; always hand back the
     /// same window, kept alive by this view, with its controls refreshed.
     public override var configureSheet: NSWindow? {
+        // A previous Options sheet that System Settings took down itself (for
+        // example by quitting while it was open) can still count as attached;
+        // handing it over again then shows nothing. End it, and if it still
+        // won't let go, start a fresh one (keeping the old one alive: freeing a
+        // window the host may still touch crashed System Settings before).
+        if let old = sheetController?.window, old.sheetParent != nil || old.isVisible {
+            old.sheetParent?.endSheet(old)
+            old.orderOut(nil)
+            if old.sheetParent != nil, let stale = sheetController {
+                Self.retiredSheets.append(stale)
+                sheetController = nil
+            }
+        }
         if sheetController == nil { sheetController = ConfigSheetController(settings: settings) }
         sheetController?.prepare()
+        MapFlyoverView.log.notice("options requested (view #\(self.serial, privacy: .public), preview=\(self.isPreview, privacy: .public), retired sheets=\(Self.retiredSheets.count, privacy: .public))")
         return sheetController?.window
     }
+
+    /// Options sheets replaced while the host might still refer to them.
+    private static var retiredSheets: [ConfigSheetController] = []
 }

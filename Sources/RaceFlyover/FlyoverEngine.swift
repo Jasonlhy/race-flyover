@@ -70,7 +70,12 @@ final class FlyoverEngine {
     var aspect = 16.0 / 9.0
     private var heading = 0.0
     /// Smoothed building density at the runner (0 open … 1 dense), for automatic tilt.
-    private var builtUp = 0.0
+    /// How straight the road ahead is, eased over time (0 bendy … 1 a long straight).
+    private var straight = 0.0
+    /// Raw straightness every `straightStep` metres along the current course.
+    private var straightProfile: [Double] = []
+    private var straightCourse = ""
+    private static let straightStep = 50.0
 
     var course: Course { playlist[index] }
 
@@ -104,7 +109,7 @@ final class FlyoverEngine {
         phase = .intro
         phaseTime = 0
         heading = config.camera == .northUp ? 0 : course.heading(at: 0, behind: 0, ahead: 600)
-        builtUp = course.density(atKm: 0) ?? 0
+        straight = straightness(at: 0)
         updateCamera()
     }
 
@@ -114,7 +119,7 @@ final class FlyoverEngine {
         visit = nil
         phase = .running
         phaseTime = 0
-        builtUp = course.density(atKm: course.officialKm(at: distance)) ?? 0
+        straight = straightness(at: distance)
         heading = config.camera == .northUp ? 0 : course.heading(at: distance)
         updateCamera()
     }
@@ -129,7 +134,7 @@ final class FlyoverEngine {
         time = other.time
         distance = other.distance
         heading = other.heading
-        builtUp = other.builtUp
+        straight = other.straight
         visit = other.visit
         bursts = other.bursts
         updateCamera()
@@ -215,11 +220,9 @@ final class FlyoverEngine {
             if phaseTime >= Self.fadeDuration { nextCourse(); return }
         }
         bursts.removeAll { time - $0.start > Self.burstDuration }
-        // Ease towards the local building density over a few seconds so the
-        // camera glides rather than jumps between streets and open space.
-        if let d = course.density(atKm: course.officialKm(at: distance)) {
-            builtUp += (d - builtUp) * (1 - exp(-dt / 3.0))
-        }
+        // Ease towards how straight the road ahead is over a few seconds, so the
+        // camera glides between views rather than jumping at each corner.
+        straight += (straightness(at: distance) - straight) * (1 - exp(-dt / 3.0))
         updateHeading(dt: dt, moved: moved)
         updateCamera()
     }
@@ -349,16 +352,39 @@ final class FlyoverEngine {
         let s = course.sample(at: distance)
         var tilt = config.tiltDegrees
         var distance = config.cameraDistance
-        if config.autoTilt && course.data.density != nil {
-            // Among dense buildings: look down more steeply and sit a little higher so
-            // the route isn't hidden. In open areas: the chosen tilt, a lower flyover.
-            tilt = max(min(tilt, 20), tilt - 30 * builtUp)
-            distance *= 1 + 0.35 * builtUp
+        if config.autoTilt {
+            // Dynamic tilt: on a long straight, a higher, more top-down view down
+            // the road; through bends and short blocks, a lower, tilted flyover.
+            tilt = 62 + (25 - 62) * straight
+            distance *= 0.85 + (1.35 - 0.85) * straight
         }
         let cam = CameraState(target: SIMD3(s.x, s.y, s.ele), coordinate: s.coordinate, heading: heading,
                               tilt: tilt * .pi / 180, distance: distance)
         guard let v = visit, case let w = visitWeight, w > 0 else { return cam }
         return blend(cam, framed(cam, stop: v.stop, since: v.start), w)
+    }
+
+    /// How straight the road is from just behind `d` to 800 m ahead: the
+    /// straight-line distance over the distance along the road, mapped so that
+    /// 1 is a long straight and 0 is bendy (corners, short blocks, turns).
+    private func straightness(at d: Double) -> Double {
+        if straightCourse != course.id {
+            straightCourse = course.id
+            let c = course
+            straightProfile = stride(from: 0.0, through: c.length, by: Self.straightStep).map { x in
+                let a = max(0, x - 100), b = min(c.length, x + 800)
+                guard b - a > 50 else { return 1 }
+                let p = c.sample(at: a), q = c.sample(at: b)
+                let ratio = hypot(q.x - p.x, q.y - p.y) / (b - a)
+                // Only very nearly straight counts (gentle curves are bends here),
+                // which keeps city courses roughly half low, half top-down.
+                return smoothstep((ratio - 0.93) / (0.995 - 0.93))
+            }
+        }
+        guard !straightProfile.isEmpty else { return 0.5 }
+        let f = min(max(d / Self.straightStep, 0), Double(straightProfile.count - 1))
+        let i = Int(f), j = min(i + 1, straightProfile.count - 1)
+        return straightProfile[i] + (straightProfile[j] - straightProfile[i]) * (f - Double(i))
     }
 
     private func overviewCamera(rotating: Bool) -> CameraState {
