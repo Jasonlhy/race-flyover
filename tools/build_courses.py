@@ -315,6 +315,50 @@ DENSITY_RADIUS = 150        # metres around each sample
 DENSITY_FULL = 180          # buildings within the radius that count as "fully built-up"
 
 
+TALL_FULL = 6               # tall buildings within the radius that count as "towers all round"
+# 10+ floors, or 35 m+ tall (OpenStreetMap tags).
+TALL_FILTER = '["building"]["building:levels"~"^([1-9][0-9]+)$"]'
+TALL_FILTER_H = '["building"]["height"~"^(3[5-9]|[4-9][0-9]|[1-9][0-9][0-9]+)([.][0-9]+)?( m)?$"]'
+
+
+def tall_buildings(course, samples):
+    """How towered-over the route is (0 = none, 1 = towers all round), every ~300 m.
+
+    Counts buildings of 10+ floors or 35 m+ within DENSITY_RADIUS of points
+    along the route. Dynamic tilt looks down more steeply where these are,
+    since from a low camera they hide the street and the runner.
+    """
+    cache = os.path.join(CACHE, f"{course['id']}_tall.json")
+    pts = samples[::DENSITY_EVERY]
+    if os.path.exists(cache):
+        counts = json.load(open(cache))
+    else:
+        body = "".join(
+            f'(way{TALL_FILTER}(around:{DENSITY_RADIUS},{p[0]:.5f},{p[1]:.5f});'
+            f'way{TALL_FILTER_H}(around:{DENSITY_RADIUS},{p[0]:.5f},{p[1]:.5f}););out count;'
+            for p in pts)
+        data = urllib.parse.urlencode({"data": "[out:json][timeout:300];" + body}).encode()
+        result = None
+        for attempt in range(4):
+            url = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter"][attempt % 2]
+            try:
+                req = urllib.request.Request(url, data=data, headers={"User-Agent": "RaceFlyover-course-builder/1.0"})
+                with urllib.request.urlopen(req, timeout=330) as r:
+                    result = json.load(r)
+                break
+            except Exception as e:  # noqa: BLE001
+                if attempt == 3:
+                    print(f"    tall-building counts unavailable ({e})")
+                    return None
+                time.sleep(10)
+        counts = [int(e["tags"]["ways"]) for e in result["elements"] if e.get("type") == "count"]
+        with open(cache, "w") as f:
+            json.dump(counts, f)
+        time.sleep(3)
+    tall = smooth([min(1.0, c / TALL_FULL) for c in counts], 1)
+    return [round(t, 2) for t in tall]
+
+
 def building_density(course, samples):
     """How built-up the route is (0 = open, 1 = dense), every ~300 m.
 
@@ -360,6 +404,7 @@ def build(course):
     eles = smooth(eles, 3)
     stations, estimated = stations_for(course, waypoints, pts, cumulative(pts)[-1])
     density = building_density(course, samples)
+    tall = tall_buildings(course, samples)
     out = {
         "id": course["id"],
         "name": course["name"],
@@ -372,6 +417,7 @@ def build(course):
         "stationsEstimated": estimated,
         "landmarks": course.get("landmarks"),
         "density": density,
+        "tall": tall,
         "densityStepKm": round(DENSITY_EVERY * RESAMPLE_M / total * MARATHON_KM, 4) if density else None,
         "stations": stations,
         "points": [[round(p[0], 6), round(p[1], 6), round(e, 1)] for p, e in zip(samples, eles)],

@@ -51,8 +51,8 @@ final class ConfigSheetController: NSObject {
         self.settings = settings
         original = settings.config
         config = original
-        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 760, height: 600),
-                          styleMask: [.titled, .fullSizeContentView], backing: .buffered, defer: false)
+        window = OptionsWindow(contentRect: NSRect(x: 0, y: 0, width: 760, height: 600),
+                               styleMask: [.titled, .fullSizeContentView], backing: .buffered, defer: false)
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         super.init()
@@ -758,4 +758,12 @@ private final class GroupBox: NSView {
     }
 
     override var wantsUpdateLayer: Bool { true }
+}
+
+/// The Options window always accepts keyboard focus. System Settings presents
+/// it from another process, and when an earlier sheet hadn't fully gone it
+/// refused focus ("canBecomeKeyWindow returned NO"), leaving it unresponsive.
+private final class OptionsWindow: NSWindow {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
 }

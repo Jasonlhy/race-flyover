@@ -76,6 +76,8 @@ final class FlyoverEngine {
     private var straightProfile: [Double] = []
     private var straightCourse = ""
     private static let straightStep = 50.0
+    /// How much tall buildings crowd the route, eased over time (0 none … 1 towers all round).
+    private var builtUp = 0.0
 
     var course: Course { playlist[index] }
 
@@ -110,6 +112,7 @@ final class FlyoverEngine {
         phaseTime = 0
         heading = config.camera == .northUp ? 0 : course.heading(at: 0, behind: 0, ahead: 600)
         straight = straightness(at: 0)
+        builtUp = crowding(atKm: 0)
         updateCamera()
     }
 
@@ -120,6 +123,7 @@ final class FlyoverEngine {
         phase = .running
         phaseTime = 0
         straight = straightness(at: distance)
+        builtUp = crowding(atKm: course.officialKm(at: distance))
         heading = config.camera == .northUp ? 0 : course.heading(at: distance)
         updateCamera()
     }
@@ -135,6 +139,7 @@ final class FlyoverEngine {
         distance = other.distance
         heading = other.heading
         straight = other.straight
+        builtUp = other.builtUp
         visit = other.visit
         bursts = other.bursts
         updateCamera()
@@ -223,6 +228,7 @@ final class FlyoverEngine {
         // Ease towards how straight the road ahead is over a few seconds, so the
         // camera glides between views rather than jumping at each corner.
         straight += (straightness(at: distance) - straight) * (1 - exp(-dt / 3.0))
+        builtUp += (crowding(atKm: course.officialKm(at: distance)) - builtUp) * (1 - exp(-dt / 3.0))
         updateHeading(dt: dt, moved: moved)
         updateCamera()
     }
@@ -357,11 +363,21 @@ final class FlyoverEngine {
             // the road; through bends and short blocks, a lower, tilted flyover.
             tilt = 62 + (25 - 62) * straight
             distance *= 0.85 + (1.35 - 0.85) * straight
+            // Among tall buildings a low camera loses the street (and the runner)
+            // behind them: look down more steeply and sit higher.
+            tilt = min(tilt, 62 - 40 * builtUp)
+            distance *= 1 + 0.35 * builtUp
         }
         let cam = CameraState(target: SIMD3(s.x, s.y, s.ele), coordinate: s.coordinate, heading: heading,
                               tilt: tilt * .pi / 180, distance: distance)
         guard let v = visit, case let w = visitWeight, w > 0 else { return cam }
         return blend(cam, framed(cam, stop: v.stop, since: v.start), w)
+    }
+
+    /// How much buildings would hide the street from a low camera: mostly tall
+    /// buildings, with a little for dense low-rise.
+    private func crowding(atKm km: Double) -> Double {
+        max(course.tallness(atKm: km) ?? 0, 0.4 * (course.density(atKm: km) ?? 0))
     }
 
     /// How straight the road is from just behind `d` to 800 m ahead: the

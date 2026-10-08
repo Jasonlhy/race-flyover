@@ -176,6 +176,33 @@ if arguments.contains("--sync-test") {
     exit(0)
 }
 
+if arguments.contains("--sheet-test") {
+    // Like System Settings: a fresh view for each Options click, sheet shown,
+    // Done pressed, then again from a new view.
+    let host = NSWindow(contentRect: NSRect(x: 200, y: 200, width: 900, height: 700), styleMask: [.titled],
+                        backing: .buffered, defer: false)
+    host.makeKeyAndOrderFront(nil)
+    NSApp.activate(ignoringOtherApps: true)
+    for round in 1...3 {
+        let view = RaceFlyoverView(frame: NSRect(x: 0, y: 0, width: 300, height: 200), isPreview: true)!
+        guard let sheet = view.configureSheet else { print("round \(round): no sheet"); exit(1) }
+        var ended = false
+        host.beginSheet(sheet) { _ in ended = true }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+        print("round \(round): shown=\(sheet.isVisible) attached=\(host.attachedSheet === sheet) key=\(sheet.isKeyWindow) canKey=\(sheet.canBecomeKey)")
+        // Press Done.
+        func find(_ v: NSView) -> NSButton? {
+            if let b = v as? NSButton, b.title == "Done" { return b }
+            for s in v.subviews { if let b = find(s) { return b } }
+            return nil
+        }
+        find(sheet.contentView!)?.performClick(nil)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+        print("round \(round): after Done ended=\(ended) visible=\(sheet.isVisible) attached=\(host.attachedSheet != nil)")
+    }
+    exit(0)
+}
+
 if arguments.contains("--list") {
     for c in CourseLibrary.all(settings: Settings()) {
         print(String(format: "%-18@ %-28@ %6.2f km  %2d fluid  %d fuel%@", c.id as NSString, c.name as NSString,

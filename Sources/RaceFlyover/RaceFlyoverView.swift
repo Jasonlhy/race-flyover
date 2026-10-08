@@ -48,7 +48,6 @@ public final class RaceFlyoverView: ScreenSaverView {
     private var lastCourseID: String?
     /// Set if Apple Maps couldn't produce imagery at all; map styles then use Midnight.
     private var mapFailed = false
-    private var sheetController: ConfigSheetController?
     /// Used by the preview app.
     var paused = false
 
@@ -422,25 +421,21 @@ public final class RaceFlyoverView: ScreenSaverView {
     /// System Settings may ask for the sheet more than once; always hand back the
     /// same window, kept alive by this view, with its controls refreshed.
     public override var configureSheet: NSWindow? {
-        // A previous Options sheet that System Settings took down itself (for
-        // example by quitting while it was open) can still count as attached;
-        // handing it over again then shows nothing. End it, and if it still
-        // won't let go, start a fresh one (keeping the old one alive: freeing a
-        // window the host may still touch crashed System Settings before).
-        if let old = sheetController?.window, old.sheetParent != nil || old.isVisible {
-            old.sheetParent?.endSheet(old)
-            old.orderOut(nil)
-            if old.sheetParent != nil, let stale = sheetController {
-                Self.retiredSheets.append(stale)
-                sheetController = nil
-            }
-        }
-        if sheetController == nil { sheetController = ConfigSheetController(settings: settings) }
-        sheetController?.prepare()
-        MapFlyoverView.log.notice("options requested (view #\(self.serial, privacy: .public), preview=\(self.isPreview, privacy: .public), retired sheets=\(Self.retiredSheets.count, privacy: .public))")
-        return sheetController?.window
+        // One Options window for the whole process. System Settings makes a new
+        // copy of the screensaver each time Options is clicked, so a window per
+        // copy left earlier ones behind, sometimes still attached to the last
+        // session, and the next one could come up unresponsive. Before handing
+        // the window over, make sure it's fully detached from any earlier use.
+        let controller = Self.sharedSheet ?? ConfigSheetController(settings: settings)
+        Self.sharedSheet = controller
+        let window = controller.window
+        if let parent = window.sheetParent { parent.endSheet(window) }
+        if window.isVisible { window.orderOut(nil) }
+        controller.prepare()
+        MapFlyoverView.log.notice("options requested (view #\(self.serial, privacy: .public), preview=\(self.isPreview, privacy: .public))")
+        return window
     }
 
-    /// Options sheets replaced while the host might still refer to them.
-    private static var retiredSheets: [ConfigSheetController] = []
+    /// The Options sheet shared by every copy of the screensaver in this process.
+    private static var sharedSheet: ConfigSheetController?
 }

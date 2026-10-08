@@ -26,6 +26,8 @@ struct CourseData: Codable {
     /// How built-up the route is (0 open … 1 dense) every `densityStepKm`, for automatic tilt.
     var density: [Double]?
     var densityStepKm: Double?
+    /// How towered-over the route is (0 none … 1 towers all round), same spacing.
+    var tall: [Double]?
     /// Underground stretches as `[start, end]` official km, drawn dashed.
     var tunnels: [[Double]]?
     var stations: [Station]
@@ -126,6 +128,14 @@ final class Course {
     }
 
     /// How built-up the surroundings are at official km `km` (0 open … 1 dense), if known.
+    /// How towered-over the route is at official km `km` (0 none … 1 towers all round), if known.
+    func tallness(atKm km: Double) -> Double? {
+        guard let t = data.tall, !t.isEmpty, let step = data.densityStepKm, step > 0 else { return nil }
+        let f = min(max(km / step, 0), Double(t.count - 1))
+        let i = Int(f), j = min(i + 1, t.count - 1)
+        return t[i] + (t[j] - t[i]) * (f - Double(i))
+    }
+
     func density(atKm km: Double) -> Double? {
         guard let d = data.density, let step = data.densityStepKm, step > 0, !d.isEmpty else { return nil }
         let x = max(0, km / step)
