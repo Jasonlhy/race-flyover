@@ -55,6 +55,14 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
     /// the route is visible they blend into it.
     private let ghostDone = CAShapeLayer()
     private let ghostAhead = CAShapeLayer()
+    /// A short stretch of route either side of the pin, drawn on top of the
+    /// map and fading out within a few pin-widths, so the pin always visibly
+    /// sits on its path, even where a bridge, viaduct or tower hides the route.
+    private let leash = CALayer()
+    private let leashAhead = CAShapeLayer()
+    private let leashCasing = CAShapeLayer()
+    private let leashCore = CAShapeLayer()
+    private let leashMask = CAGradientLayer()
     private var routeRenderer: RouteRenderer?
     private var routeOverlay: RouteOverlay?
     private var lastCoveredUpdate = 0.0
@@ -85,6 +93,23 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         map.showsScale = false
         map.showsUserLocation = false
         addSubview(map)
+        leash.zPosition = 7
+        leash.actions = ["position": NSNull(), "bounds": NSNull(), "hidden": NSNull()]
+        leashMask.type = .radial
+        leashMask.colors = [NSColor.black.cgColor, NSColor.black.cgColor, NSColor.clear.cgColor]
+        leashMask.locations = [0, 0.45, 1]
+        leashMask.startPoint = CGPoint(x: 0.5, y: 0.5)
+        leashMask.endPoint = CGPoint(x: 1, y: 1)
+        leashMask.actions = ["position": NSNull(), "bounds": NSNull(), "frame": NSNull()]
+        leash.mask = leashMask
+        for l in [leashAhead, leashCasing, leashCore] {
+            l.fillColor = nil
+            l.lineCap = .round
+            l.lineJoin = .round
+            l.actions = ["path": NSNull(), "lineWidth": NSNull(), "strokeColor": NSNull()]
+            leash.addSublayer(l)
+        }
+        layer?.addSublayer(leash)
         for (l, z) in [(ghostAhead, 5.0), (ghostDone, 6.0)] {
             l.zPosition = CGFloat(z)
             l.fillColor = nil
@@ -400,8 +425,11 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         routeRenderer = nil
         lastCoveredUpdate = 0
         map.addOverlay(route, level: .aboveRoads)
-        ghostDone.strokeColor = trailTint.withAlphaComponent(0.4).cgColor
-        ghostAhead.strokeColor = aheadTint.withAlphaComponent(0.3).cgColor
+        ghostDone.strokeColor = trailTint.withAlphaComponent(0.6).cgColor
+        ghostAhead.strokeColor = aheadTint.withAlphaComponent(0.5).cgColor
+        leashAhead.strokeColor = aheadTint.cgColor
+        leashCasing.strokeColor = NSColor.white.withAlphaComponent(0.92).cgColor
+        leashCore.strokeColor = trailTint.cgColor
 
         var annotations: [MKAnnotation] = []
         for st in course.data.stations where (st.fluid && config.showFluid) || (st.fuel && config.showFuel) {
@@ -551,6 +579,7 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         guard let proj = projection else {
             ghostDone.path = nil
             ghostAhead.path = nil
+            leash.isHidden = true
             return
         }
         let here = proj.here
@@ -577,10 +606,42 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         for (l, path) in [(ghostDone, done), (ghostAhead, ahead)] {
-            l.lineWidth = 2.2 * w
-            l.lineDashPattern = [0, NSNumber(value: Double(7 * w))]   // round dots
+            // Round dots about half the path's width, so they read at any thickness.
+            l.lineWidth = Self.aheadWidth * 0.5 * w
+            l.lineDashPattern = [0, NSNumber(value: Double(Self.aheadWidth * 1.1 * w))]
             l.path = path
         }
+
+        // The leash: the route within a few pin-widths of the pin, on top.
+        let reach = Double(pinRadius) * 3.2 * metresPerPoint
+        func stretch(from a: Double, to b: Double) -> CGPath {
+            let path = CGMutablePath()
+            var first = true
+            var d = max(0, a)
+            let end = min(course.length, b)
+            let step = max(2.0, (end - d) / 24)
+            while d <= end + 0.001 {
+                let s = course.sample(at: min(d, end))
+                if let p = proj.ground.apply(s.x - here.x, s.y - here.y) {
+                    if first { path.move(to: p); first = false } else { path.addLine(to: p) }
+                }
+                d += step
+            }
+            return path
+        }
+        let behindLeash = stretch(from: distance - reach, to: distance)
+        leash.isHidden = engine?.phase == .intro || engine?.phase == .fadeOut
+        leash.frame = bounds
+        let r = pinRadius * 3.2
+        leashMask.frame = CGRect(x: pin.x - r, y: pin.y - r, width: r * 2, height: r * 2)
+        leashAhead.lineWidth = Self.aheadWidth * w
+        leashAhead.path = stretch(from: distance, to: distance + reach)
+        leashAhead.opacity = Float(aheadTint.alphaComponent)
+        leashAhead.strokeColor = aheadTint.withAlphaComponent(1).cgColor
+        leashCasing.lineWidth = Self.casingWidth * w
+        leashCasing.path = behindLeash
+        leashCore.lineWidth = Self.coreWidth * w
+        leashCore.path = behindLeash
         CATransaction.commit()
     }
 

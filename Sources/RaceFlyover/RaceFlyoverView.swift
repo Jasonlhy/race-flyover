@@ -300,6 +300,8 @@ public final class RaceFlyoverView: ScreenSaverView {
             config = latest
             applyConfig()
         }
+        let c = config
+        MapFlyoverView.log.notice("settings: style=\(c.style.rawValue, privacy: .public) camera=\(c.camera.rawValue, privacy: .public) dynamicTilt=\(c.autoTilt, privacy: .public) tilt=\(Int(c.tiltDegrees), privacy: .public) zoom=\(c.zoom, privacy: .public) lap=\(Int(c.lapMinutes), privacy: .public)min map3D=\(c.map3D, privacy: .public) fps=\(c.frameRate.rawValue, privacy: .public) path=\(c.pathWidth.rawValue, privacy: .public) pin=\(c.pinStyle.rawValue, privacy: .public)/\(c.pinSize.rawValue, privacy: .public) slow=\(c.slowDown.rawValue, privacy: .public) displays=\(c.displays.rawValue, privacy: .public) courses=\(c.selection, privacy: .public)")
     }
 
     public override func stopAnimation() {
