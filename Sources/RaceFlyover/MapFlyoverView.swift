@@ -1,5 +1,6 @@
 import AppKit
 import MapKit
+import simd
 import os
 
 private final class StationAnnotation: NSObject, MKAnnotation {
@@ -17,6 +18,19 @@ private final class LandmarkAnnotation: NSObject, MKAnnotation {
     init(_ l: Landmark) {
         name = l.name
         coordinate = CLLocationCoordinate2D(latitude: l.lat, longitude: l.lon)
+    }
+}
+
+/// An invisible marker just ahead of the runner. MapKit positions its own
+/// markers on the real ground, so where this one lands shows how far MapKit's
+/// ground is from the sea-level answer `convert` gives.
+private final class ProbeAnnotation: NSObject, MKAnnotation {
+    let coordinate: CLLocationCoordinate2D
+    /// Course x/y and ground height at the marker.
+    let x: Double, y: Double, ele: Double
+    init(_ s: CourseSample) {
+        coordinate = s.coordinate
+        x = s.x; y = s.y; ele = s.ele
     }
 }
 
@@ -159,8 +173,8 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         let camera = MKMapCamera(lookingAtCenter: cam.coordinate, fromDistance: cam.distance,
                                  pitch: CGFloat(cam.tilt * 180 / .pi), heading: cam.heading * 180 / .pi)
         map.setCamera(camera, animated: false)
-        let projection = makeProjection(course: course, distance: engine.distance)
-        updateRouteWidth(cameraDistance: engine.camera.distance, config: config, projection: projection)
+        var projection = makeProjection(course: course, distance: engine.distance)
+        if let p = projection { projection?.reference = measureReference(course: course, distance: engine.distance, projection: p) }
         FrameStats.shared.measure("trail") {
             updateCovered(distance: engine.distance)
             drawGhost(course: course, distance: engine.distance, projection: projection)
@@ -393,6 +407,8 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         builtKey = key
         map.removeOverlays(map.overlays)
         map.removeAnnotations(map.annotations)
+        probe = nil
+        referenceHeight = nil
 
         let coords = course.lat.indices.map { CLLocationCoordinate2D(latitude: course.lat[$0], longitude: course.lon[$0]) }
         let route = RouteOverlay(course: course)
@@ -505,10 +521,69 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
     /// that same refresh earlier: blended between this frame and the last.
     private struct FrameProjection {
         let here: CourseSample
-        /// Ground (metres from the runner) to screen, as the map is shown.
+        /// MapKit's reference plane (metres from the runner) to screen, as the map is shown.
         let ground: Homography
-        /// The runner's spot, as the map is shown.
-        let pin: CGPoint
+        /// The runner's spot on that plane, as the map is shown.
+        let planePin: CGPoint
+        /// The camera, for lifting points to their real height.
+        let camera: TerrainCamera?
+        /// Height of MapKit's reference plane in course elevations, once measured.
+        var reference: Double?
+
+        /// Where MapKit draws a spot `(dx, dy)` metres from the runner standing
+        /// on ground `ele` metres high.
+        func point(_ dx: Double, _ dy: Double, ele: Double) -> CGPoint? {
+            guard let p = ground.apply(dx, dy) else { return nil }
+            guard let camera, let reference, let lift = camera.lift(dx, dy, ele - reference) else { return p }
+            return CGPoint(x: p.x + lift.dx, y: p.y + lift.dy)
+        }
+
+        /// The runner's spot, where MapKit draws it.
+        var pin: CGPoint {
+            guard let camera, let reference, let lift = camera.lift(0, 0, here.ele - reference) else { return planePin }
+            return CGPoint(x: planePin.x + lift.dx, y: planePin.y + lift.dy)
+        }
+    }
+
+    /// MapKit's camera as a pinhole, in metres around the runner. With 3D
+    /// terrain MapKit draws the ground (and the route on it) at its real height,
+    /// but `convert` answers for a flat reference plane that only follows the
+    /// ground loosely (it lags on hills). With the camera tilted, a spot `h`
+    /// metres above that plane appears further up the screen. This works out
+    /// by how much.
+    private struct TerrainCamera {
+        let eye: SIMD3<Double>
+        let forward: SIMD3<Double>, right: SIMD3<Double>, up: SIMD3<Double>
+        let focal: Double
+
+        /// `fit` is given the camera with a focal length of 1 and returns the real one.
+        init?(pitch: Double, heading: Double, distance: Double, focalFrom fit: (TerrainCamera) -> Double?) {
+            let f = SIMD3(sin(heading), cos(heading), 0.0)
+            let e = -f * (distance * sin(pitch)) + SIMD3(0, 0, distance * cos(pitch))
+            let fwd = simd_normalize(-e)
+            let r = SIMD3(cos(heading), -sin(heading), 0.0)
+            let unit = TerrainCamera(eye: e, forward: fwd, right: r, up: simd_cross(r, fwd), focal: 1)
+            guard let fitted = fit(unit), fitted.isFinite, fitted > 10 else { return nil }
+            self.init(eye: e, forward: fwd, right: r, up: simd_cross(r, fwd), focal: fitted)
+        }
+
+        private init(eye: SIMD3<Double>, forward: SIMD3<Double>, right: SIMD3<Double>, up: SIMD3<Double>, focal: Double) {
+            self.eye = eye; self.forward = forward; self.right = right; self.up = up; self.focal = focal
+        }
+
+        /// Screen offset from the centre (points, y up) for a spot, with this focal length.
+        func screen(_ p: SIMD3<Double>) -> CGVector? {
+            let v = p - eye
+            let depth = simd_dot(v, forward)
+            guard depth > 1 else { return nil }
+            return CGVector(dx: focal * simd_dot(v, right) / depth, dy: focal * simd_dot(v, up) / depth)
+        }
+
+        /// How far a spot moves on screen when raised `h` metres above the reference plane.
+        func lift(_ dx: Double, _ dy: Double, _ h: Double) -> CGVector? {
+            guard let a = screen(SIMD3(dx, dy, 0)), let b = screen(SIMD3(dx, dy, h)) else { return nil }
+            return CGVector(dx: b.dx - a.dx, dy: b.dy - a.dy)
+        }
     }
 
     /// How late MapKit shows a camera change, in seconds (measured: a little more than a 60 Hz refresh).
@@ -536,7 +611,7 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         let origin = SIMD2(here.x, here.y)
         defer { previous = (now, pinNow, time, origin) }
         guard let prev = previous, time > prev.time, time - prev.time < 0.25 else {
-            return FrameProjection(here: here, ground: now, pin: pinNow)
+            return FrameProjection(here: here, ground: now, planePin: pinNow, camera: terrainCamera(refs: refs, screen: screen, pin: pinNow))
         }
         // Blend towards the last frame by the share of a frame MapKit is behind.
         let lag = min(1, Self.mapLatency / (time - prev.time))
@@ -544,7 +619,73 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
         let shift = origin - prev.origin
         let prevHere = prev.ground.shifted(by: shift.x, shift.y)
         let pin = CGPoint(x: pinNow.x + (prev.pin.x - pinNow.x) * lag, y: pinNow.y + (prev.pin.y - pinNow.y) * lag)
-        return FrameProjection(here: here, ground: now.blended(with: prevHere, by: lag), pin: pin)
+        return FrameProjection(here: here, ground: now.blended(with: prevHere, by: lag), planePin: pin,
+                               camera: terrainCamera(refs: refs, screen: screen, pin: pinNow))
+    }
+
+    private var probe: ProbeAnnotation?
+    private var probePlaced = 0.0
+    /// Height of MapKit's reference plane, in course elevations (smoothed).
+    private var referenceHeight: Double?
+
+    /// Keeps the probe marker just ahead of the runner and, from where MapKit
+    /// puts it, measures the height of MapKit's reference plane.
+    private func measureReference(course: Course, distance: Double, projection proj: FrameProjection) -> Double? {
+        guard let camera = proj.camera, let engine else {
+            referenceHeight = nil
+            return nil
+        }
+        let now = CACurrentMediaTime()
+        if let probe, now - probePlaced > 0.25, let view = map.view(for: probe), view.superview != nil, !view.isHidden {
+            let seen = view.convert(CGPoint(x: view.bounds.midX, y: view.bounds.midY), to: self)
+            let dx = probe.x - proj.here.x, dy = probe.y - proj.here.y
+            if let flat = proj.ground.apply(dx, dy), let perMetre = camera.lift(dx, dy, 1) {
+                let size = perMetre.dx * perMetre.dx + perMetre.dy * perMetre.dy
+                // Needs some tilt: looking straight down, height doesn't show (or matter).
+                if size > 0.0004 {
+                    var above = Double(((seen.x - flat.x) * perMetre.dx + (seen.y - flat.y) * perMetre.dy) / size)
+                    // Perspective makes the lift slightly non-linear in height: refine once.
+                    if abs(above) > 1, let l = camera.lift(dx, dy, above) {
+                        let got = Double((l.dx * perMetre.dx + l.dy * perMetre.dy) / size)
+                        if abs(got) > 0.5 { above *= above / got }
+                    }
+                    if above.isFinite, abs(above) < 600 {
+                        let measured = probe.ele - above
+                        referenceHeight = referenceHeight.map { $0 + (measured - $0) * 0.3 } ?? measured
+                    }
+                }
+            }
+        }
+        // Re-place the probe about once a second, a little ahead of the runner.
+        if engine.phase == .running || engine.phase == .intro, now - probePlaced > 1.0 {
+            probePlaced = now
+            if let old = probe { map.removeAnnotation(old) }
+            let ahead = engine.phase == .running ? engine.metresPerSecond * 0.6 : 0
+            let p = ProbeAnnotation(course.sample(at: min(course.length, distance + ahead)))
+            probe = p
+            map.addAnnotation(p)
+        }
+        return referenceHeight
+    }
+
+    /// The pinhole camera for this frame, with its focal length fitted so that
+    /// points on the reference plane land where `convert` puts them (only with 3D terrain).
+    private func terrainCamera(refs: [(Double, Double)], screen: [CGPoint], pin: CGPoint) -> TerrainCamera? {
+        guard engine?.config.map3D ?? true else { return nil }
+        let pitch = map.camera.pitch * .pi / 180, heading = map.camera.heading * .pi / 180
+        return TerrainCamera(pitch: pitch, heading: heading, distance: map.camera.centerCoordinateDistance) { unit in
+            // Fit on the point ahead and the points to the sides.
+            var sum = 0.0, n = 0.0
+            for k in [0, 2, 3] {
+                guard let s = unit.screen(SIMD3(refs[k].0, refs[k].1, 0)) else { continue }
+                let want = CGVector(dx: screen[k].x - pin.x, dy: screen[k].y - pin.y)
+                let len = hypot(s.dx, s.dy)
+                guard len > 1e-6 else { continue }
+                sum += hypot(want.dx, want.dy) / len
+                n += 1
+            }
+            return n > 0 ? sum / n : nil
+        }
     }
 
     private func drawGhost(course: Course, distance: Double, projection: FrameProjection?) {
@@ -565,7 +706,7 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
             if startAtPin { path.move(to: pin); drawing = true }
             for i in range {
                 let dx = course.x[i] - here.x, dy = course.y[i] - here.y
-                guard dx * dx + dy * dy < radius * radius, let p = proj.ground.apply(dx, dy) else { drawing = false; continue }
+                guard dx * dx + dy * dy < radius * radius, let p = proj.point(dx, dy, ele: course.ele[i]) else { drawing = false; continue }
                 if drawing { path.addLine(to: p) } else { path.move(to: p); drawing = true }
             }
             if endAtPin && drawing { path.addLine(to: pin) }
@@ -623,6 +764,10 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
             }
             view.centerOffset = CGPoint(x: 0, y: -h)
             view.zPriority = .defaultSelected
+        case is ProbeAnnotation:
+            // Invisible, but still placed by MapKit every frame.
+            view.image = Self.image(size: 2) { _, _ in }
+            view.zPriority = .min
         case let m as MarkerAnnotation:
             let text = Draw.text(m.text, size: 11, weight: .heavy, color: m.highlight ? .black : .white, tracking: 1)
             let ts = text.size()
