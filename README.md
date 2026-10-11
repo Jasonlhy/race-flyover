@@ -45,6 +45,9 @@ minimap of the whole course, and the elevation profile along the bottom.*
   pass a station, a marker or halfway. Choose its size and colour.
 - **The route ahead and behind**: the part you've covered is drawn in your trail colour, the part
   still to run in a lighter, see-through shade.
+- **A route that sits in the city**: in the Apple Maps looks with 3D buildings, the route is drawn on
+  the streets themselves, so buildings in front of it hide it as they would hide the road. A faint
+  dotted line shows where it runs behind them.
 - **Slow down at highlights**: the runner eases almost to a stop at landmarks (and, if you like,
   at stations and distance markers) while the camera frames the view. It pulls back for big sights
   such as parks, palaces and bridges, moves in close for statues, and sweeps slowly around so you
