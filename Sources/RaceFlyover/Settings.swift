@@ -278,6 +278,18 @@ final class Settings {
         }
     }
 
+    /// The easter egg in Options (five clicks on the version number): shows the
+    /// courses in cities where Apple Maps has no 3D buildings.
+    var backRoadsUnlocked: Bool {
+        get { defaults.bool(forKey: "backRoads") }
+        set {
+            defaults.set(newValue, forKey: "backRoads")
+            defaults.synchronize()
+            CourseLibrary.invalidate()
+            NotificationCenter.default.post(name: Settings.didChange, object: nil)
+        }
+    }
+
     var config: Config {
         get {
             var c = Config()
@@ -357,11 +369,16 @@ final class Settings {
 /// The bundled courses, built by tools/build_courses.py.
 enum CourseLibrary {
     private static var cache: [Course]?
+    private static var cachedUnlocked = false
 
     static func invalidate() { cache = nil }
 
+    /// The courses on offer: every bundled course, minus the "back roads"
+    /// (cities with no 3D buildings in Apple Maps) until they're unlocked.
     static func all(settings: Settings) -> [Course] {
-        if let cache { return cache }
+        let unlocked = settings.backRoadsUnlocked
+        if let cache, cachedUnlocked == unlocked { return cache }
+        cachedUnlocked = unlocked
         var result: [Course] = []
         let bundle = Bundle(for: Settings.self)
         if let dir = bundle.resourceURL?.appendingPathComponent("Courses"),
@@ -369,7 +386,7 @@ enum CourseLibrary {
             for url in files.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
                 guard url.pathExtension.lowercased() == "json", let data = try? Data(contentsOf: url),
                       let course = try? JSONDecoder().decode(CourseData.self, from: data),
-                      let c = Course(data: course) else { continue }
+                      let c = Course(data: course), unlocked || c.hasFlyover else { continue }
                 result.append(c)
             }
         }

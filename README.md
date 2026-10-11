@@ -29,9 +29,9 @@ minimap of the whole course, and the elevation profile along the bottom.*
 
 ## What you'll see
 
-- **19 big-city marathons**, including all seven World Marathon Majors (Boston, London, Berlin,
-  Chicago, New York, Tokyo and Sydney) plus Hong Kong, Kyoto, Amsterdam, Paris, Valencia, Los Angeles,
-  Houston, Mexico City, Osaka, Singapore, Taipei and Shanghai.
+- **14 big-city marathons**, including all seven World Marathon Majors (Boston, London, Berlin,
+  Chicago, New York, Tokyo and Sydney) plus Kyoto, Osaka, Amsterdam, Paris, Valencia, Los Angeles and
+  Houston: every city where Apple Maps has 3D buildings. A few more are tucked away for the curious.
 - **Water and fuel stations** along the route, with the next ones always shown: what they hand out
   and how far away they are.
 - **Distance markers** every kilometre or mile, and a marker at halfway.
@@ -140,8 +140,8 @@ Mac's processor quite busy. If playback isn't smooth:
 The drawn looks (Midnight, Neon Grid and so on) are much lighter than any Apple Maps look.
 
 **Accuracy.** The courses follow published race routes and are scaled to exactly 42.195 km, but
-routes change from year to year. Where a race didn't publish its stations, Race Flyover shows them
-every 5 km and says so on screen. Always check your race's official course map and runner guide
+routes change from year to year. Where a race didn't publish its stations, Race Flyover shows typical
+ones every 5 km. Always check your race's official course map and runner guide
 before race day.
 
 **Where the course data comes from.** Most routes and stations come from the community collection

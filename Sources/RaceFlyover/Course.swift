@@ -28,6 +28,8 @@ struct CourseData: Codable {
     var densityStepKm: Double?
     /// How towered-over the route is (0 none … 1 towers all round), same spacing.
     var tall: [Double]?
+    /// False where Apple Maps has no 3D buildings in satellite view.
+    var flyover: Bool?
     /// Underground stretches as `[start, end]` official km, drawn dashed.
     var tunnels: [[Double]]?
     var stations: [Station]
@@ -66,6 +68,9 @@ final class Course {
     var id: String { data.id }
     var name: String { data.name }
     var isMajor: Bool { data.major ?? false }
+    /// Whether Apple Maps shows 3D buildings here in satellite view. Courses
+    /// without are hidden until the "back roads" are unlocked in Options.
+    var hasFlyover: Bool { data.flyover ?? true }
     var fluidStations: Int { data.stations.filter(\.fluid).count }
     var fuelStations: Int { data.stations.filter(\.fuel).count }
 

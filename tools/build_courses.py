@@ -72,15 +72,15 @@ COURSES = [
      "city": "Dodger Stadium → Century City, USA", "month": "March"},
     {"id": "houston", "country": "US", "file": "houston_marathon.json", "name": "Houston Marathon",
      "city": "Houston, USA", "month": "January"},
-    {"id": "mexicocity", "country": "MX", "file": "mexico_city_marathon.json", "name": "Mexico City Marathon",
+    {"id": "mexicocity", "flyover": False, "country": "MX", "file": "mexico_city_marathon.json", "name": "Mexico City Marathon",
      "city": "Mexico City, Mexico", "month": "August"},
     {"id": "osaka", "country": "JP", "file": "osaka_marathon.json", "name": "Osaka Marathon",
      "city": "Osaka, Japan", "month": "February"},
-    {"id": "singapore", "country": "SG", "file": "singapore_marathon.json", "name": "Singapore Marathon",
+    {"id": "singapore", "flyover": False, "country": "SG", "file": "singapore_marathon.json", "name": "Singapore Marathon",
      "city": "Singapore", "month": "December"},
-    {"id": "taipei", "country": "TW", "file": "taipei_marathon.json", "name": "Taipei Marathon",
+    {"id": "taipei", "flyover": False, "country": "TW", "file": "taipei_marathon.json", "name": "Taipei Marathon",
      "city": "Taipei, Taiwan", "month": "December"},
-    {"id": "hongkong", "landmarks": ['Kowloon Park', 'Stonecutters Bridge', 'Ting Kau Bridge', 'Tsing Ma Bridge',
+    {"id": "hongkong", "flyover": False, "landmarks": ['Kowloon Park', 'Stonecutters Bridge', 'Ting Kau Bridge', 'Tsing Ma Bridge',
                                      'International Commerce Centre', 'Hong Kong Observation Wheel',
                                      'Hong Kong Convention and Exhibition Centre'],
      "country": "HK", "name": "Hong Kong Marathon", "file": "hong_kong_marathon.gpx",
@@ -113,7 +113,7 @@ COURSES = [
              (37.2, True, "Kyobaum matcha cake"),
              (40.8, False, ""),
          ]]},
-    {"id": "shanghai", "country": "CN", "file": "shanghai_marathon.json", "name": "Shanghai Marathon",
+    {"id": "shanghai", "flyover": False, "country": "CN", "file": "shanghai_marathon.json", "name": "Shanghai Marathon",
      "city": "Shanghai, China", "month": "November"},
 ]
 
@@ -412,6 +412,9 @@ def build(course):
         "month": course["month"],
         "country": course["country"],
         "major": course.get("major", False),
+        # False where Apple Maps has no 3D buildings in satellite view (checked by
+        # eye in the preview app); those courses are hidden until unlocked.
+        **({"flyover": False} if course.get("flyover") is False else {}),
         "distanceKm": MARATHON_KM,
         "source": course.get("url") or SOURCE.replace("raw.githubusercontent.com", "github.com").replace("/main/", ""),
         "stationsEstimated": estimated,

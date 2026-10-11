@@ -171,10 +171,12 @@ final class ConfigSheetController: NSObject {
         sidebar.translatesAutoresizingMaskIntoConstraints = false
         // Build version (release tag or git commit), bottom left.
         let info = Bundle(for: ConfigSheetController.self).infoDictionary
-        let versionLabel = NSTextField(labelWithString: "Version \(info?["RaceFlyoverVersion"] as? String ?? info?["CFBundleShortVersionString"] as? String ?? "?")")
+        versionText = "Version \(info?["RaceFlyoverVersion"] as? String ?? info?["CFBundleShortVersionString"] as? String ?? "?")"
+        versionLabel.stringValue = versionText
         versionLabel.font = .systemFont(ofSize: 11)
         versionLabel.textColor = .tertiaryLabelColor
-        versionLabel.isSelectable = true
+        // Easter egg: five quick clicks here unlock the "back roads".
+        versionLabel.addGestureRecognizer(NSClickGestureRecognizer(target: self, action: #selector(versionClicked)))
         versionLabel.translatesAutoresizingMaskIntoConstraints = false
         sidebarBackground.addSubview(versionLabel)
         NSLayoutConstraint.activate([
@@ -247,6 +249,57 @@ final class ConfigSheetController: NSObject {
         window.contentView = content
         window.setContentSize(NSSize(width: 748, height: 600))
         select(page: 0)
+    }
+
+    // MARK: - Easter egg: the back roads
+
+    private let versionLabel = NSTextField(labelWithString: "")
+    private var versionText = ""
+    private var versionClicks = 0
+    private var lastVersionClick = 0.0
+    private var versionReset: DispatchWorkItem?
+
+    /// Five quick clicks on the version number unlock (or hide again) the
+    /// courses in cities where Apple Maps has no 3D buildings.
+    @objc private func versionClicked() {
+        let now = CACurrentMediaTime()
+        versionClicks = now - lastVersionClick < 1.2 ? versionClicks + 1 : 1
+        lastVersionClick = now
+        let unlocked = settings.backRoadsUnlocked
+        switch versionClicks {
+        case 3: flashVersion(unlocked ? "2 more to close the back roads…" : "Warming up… 2 more")
+        case 4: flashVersion(unlocked ? "1 more…" : "On your marks… 1 more")
+        case 5...:
+            versionClicks = 0
+            settings.backRoadsUnlocked = !unlocked
+            let hidden = CourseLibrary.all(settings: settings).filter { !$0.hasFlyover }
+            if unlocked {
+                // Hidden again: untick them so they stop playing.
+                config.selection = "ids:" + checkedIDs.joined(separator: ",")
+                settings.config = config
+                flashVersion("Back roads closed", for: 2.5)
+            } else {
+                flashVersion("🏁 Back roads open: \(hidden.count) more cities", for: 4, color: .controlAccentColor)
+                NSSound(named: "Hero")?.play()
+            }
+            rebuildCourseList()
+            updateLabels()
+            select(page: 0)
+        default: break
+        }
+    }
+
+    private func flashVersion(_ text: String, for seconds: Double = 1.4, color: NSColor = .secondaryLabelColor) {
+        versionReset?.cancel()
+        versionLabel.stringValue = text
+        versionLabel.textColor = color
+        let reset = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.versionLabel.stringValue = self.versionText
+            self.versionLabel.textColor = .tertiaryLabelColor
+        }
+        versionReset = reset
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: reset)
     }
 
     private func select(page: Int) {
@@ -491,7 +544,9 @@ final class ConfigSheetController: NSObject {
         let selected = CourseLibrary.selectedIDs(config.selection, settings: settings)
         let groups: [(String, [Course])] = [
             ("World Marathon Majors", courses.filter(\.isMajor)),
-            ("More marathons", courses.filter { !$0.isMajor }),
+            ("More marathons", courses.filter { !$0.isMajor && $0.hasFlyover }),
+            // Only there once unlocked (see `versionClicked`).
+            ("Back roads · no 3D buildings in Apple Maps", courses.filter { !$0.isMajor && !$0.hasFlyover }),
         ]
         for (title, list) in groups where !list.isEmpty {
             let header = NSTextField(labelWithString: title.uppercased())
