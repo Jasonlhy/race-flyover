@@ -788,12 +788,33 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
     }
 
     func mapViewWillStartLoadingMap(_ mapView: MKMapView) {
+        loading = true
+        lastMapActivity = CACurrentMediaTime()
         Self.log.notice("map will start loading")
     }
 
     func mapViewDidFinishLoadingMap(_ mapView: MKMapView) {
         loaded = true
+        loading = false
+        lastMapActivity = CACurrentMediaTime()
         Self.log.notice("map finished loading")
+    }
+
+    func mapViewWillStartRenderingMap(_ mapView: MKMapView) {
+        fullyRendered = false
+        lastMapActivity = CACurrentMediaTime()
+    }
+
+    private var loading = false
+    private var fullyRendered = false
+    private var lastMapActivity = 0.0
+
+    /// Whether the map has finished loading and drawing the current view and
+    /// stayed that way for a moment (more detail often follows the first pass).
+    var loadState: String { "loading=\(loading) fullyRendered=\(fullyRendered) quiet=\(String(format: "%.1f", CACurrentMediaTime() - lastMapActivity))s" }
+
+    var isSettled: Bool {
+        !loading && fullyRendered && CACurrentMediaTime() - lastMapActivity > 0.6
     }
 
     /// Usually a brief network hiccup while fetching new map data (a lost
@@ -805,6 +826,8 @@ final class MapFlyoverView: NSView, MKMapViewDelegate {
 
     func mapViewDidFinishRenderingMap(_ mapView: MKMapView, fullyRendered: Bool) {
         loaded = true
+        self.fullyRendered = fullyRendered
+        lastMapActivity = CACurrentMediaTime()
     }
 
     private static func image(size: CGFloat, _ draw: @escaping (CGContext, CGRect) -> Void) -> NSImage {

@@ -53,6 +53,9 @@ final class FlyoverEngine {
     private var stopsKey = ""
     static let slowIn = 1.8, slowOut = 1.8, settle = 1.6
 
+    /// Set each frame by the view: whether everything for the start has loaded.
+    var sceneReady = true
+    static let maxLoadWait = 25.0
     static let introDuration = 7.0
     static let finishDuration = 7.0
     static let fadeDuration = 1.2
@@ -207,7 +210,13 @@ final class FlyoverEngine {
         var moved = 0.0
         switch phase {
         case .intro:
-            if phaseTime >= Self.introDuration { phase = .running; phaseTime = 0 }
+            // Hold at the start line until the scene has finished loading (map
+            // imagery, 3D buildings, landmarks), but not for ever: offline, or
+            // on a slow connection, the run starts anyway.
+            if phaseTime >= Self.introDuration, sceneReady || phaseTime >= Self.introDuration + Self.maxLoadWait {
+                phase = .running
+                phaseTime = 0
+            }
         case .running:
             updateVisit()
             moved = metresPerSecond * speedFactor * dt

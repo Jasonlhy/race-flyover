@@ -144,11 +144,6 @@ struct HUDRenderer {
         let subtitle = line(Draw.text(sub, size: 14.5 * s, color: theme.textSecondary))
         var lines = [eyebrow, name, subtitle]
         var gaps = [15 * s, 15 * s]
-        if course.data.stationsEstimated == true {
-            lines.append(line(Draw.text("Aid stations estimated (every 5 km). Check the race guide.",
-                                        size: 11.5 * s, color: theme.fuel)))
-            gaps.append(14 * s)
-        }
         let (tops, height) = stack(lines, gaps: gaps)
         let width = lines.map(\.width).max() ?? 0
         let box = CGRect(x: margin, y: margin, width: width + inset * 2, height: height + inset * 2)
@@ -526,8 +521,6 @@ struct HUDRenderer {
         let total = course.data.distanceKm
         let stats = [
             units.format(km: total, decimals: units == .km ? 3 : 1),
-            plural(course.fluidStations, "fluid station"),
-            plural(course.fuelStations, "fuel station"),
             units.formatElevation(course.elevationGain) + " climbing",
         ].joined(separator: "   ·   ")
         lines.append((Draw.text(stats, size: 16 * s, weight: .medium, color: theme.text, mono: true), 0))

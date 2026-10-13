@@ -10,7 +10,7 @@ import UniformTypeIdentifiers
 // It can also save pictures and animations, then exit:
 //   --snapshot out.png             a still image (add the options below)
 //   --gif out.gif                  an animation (with --snapshot; --frames 60 --step 0.067 --gif-width 960)
-//   --snapshot-options out.png     the Options window (--page 0…5 picks a page)
+//   --snapshot-options out.png     the Options window (--page 0…5 picks a page; --version-clicks 5 clicks the version number)
 //   --list                         print the bundled courses
 //   --sync-test                    two views side by side (multi-screen behaviour; --shared keeps both running on one screen)
 // Options for pictures and the live window:
@@ -18,7 +18,7 @@ import UniformTypeIdentifiers
 //   --progress 0.4  --advance 0.5 (play on for N seconds; --trace prints the runner and camera)  --phase intro|finish --time 3
 //   --tilt 60  --zoom 0.4  --camera chase|northUp|overview  --lap 15 (minutes)
 //   --hud full|minimal|off  --units km|mi  --font avenir  --text-scale 1.2  --panels glass
-//   --slow off|landmarks|stations|everything
+//   --slow off|landmarks|stations|everything  --dynamic-tilt on|off
 //   --pin blue  --trail purple  --map3d on|off  --fps 24|30|60  --size 1920x1080  --thumbnail
 
 let arguments = CommandLine.arguments
@@ -47,6 +47,7 @@ func applyOverrides(_ view: RaceFlyoverView) {
         if let v = option("--pin-style").flatMap(PinStyle.init) { c.pinStyle = v }
         if let v = option("--path").flatMap(PathWidth.init) { c.pathWidth = v }
         if let v = option("--slow").flatMap(SlowDown.init) { c.slowDown = v }
+        if let v = option("--dynamic-tilt") { c.autoTilt = v != "off" }
         if let v = option("--fps").flatMap(Int.init) { c.frameRate = v >= 60 ? .fps60 : (v <= 24 ? .fps24 : .fps30) }
         if let v = option("--trail").flatMap(AccentColor.init) { c.trailColor = v }
         if let v = option("--text-scale").flatMap(Double.init) { c.textScale = v }
@@ -216,6 +217,18 @@ if let output = option("--snapshot-options") {
     guard let view = RaceFlyoverView(frame: NSRect(x: 0, y: 0, width: 800, height: 450), isPreview: false),
           let sheet = view.configureSheet, let content = sheet.contentView else { exit(1) }
     content.layoutSubtreeIfNeeded()
+    if let clicks = option("--version-clicks").flatMap(Int.init) {
+        // Click the version number (the easter egg) as a person would.
+        func all(_ v: NSView) -> [NSView] { [v] + v.subviews.flatMap(all) }
+        if let label = all(content).compactMap({ $0 as? NSTextField }).first(where: { $0.stringValue.hasPrefix("Version") }),
+           let click = label.gestureRecognizers.first as? NSClickGestureRecognizer, let target = click.target, let action = click.action {
+            for _ in 0..<clicks { _ = (target as AnyObject).perform(action) }
+            print("version label now:", label.stringValue)
+        } else {
+            print("version label not found")
+        }
+        content.layoutSubtreeIfNeeded()
+    }
     if let page = option("--page").flatMap(Int.init) {
         // Render the real window (on screen) so system controls draw, via its layers.
         func walk(_ v: NSView) -> [NSView] { [v] + v.subviews.flatMap(walk) }

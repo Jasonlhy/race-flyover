@@ -346,7 +346,16 @@ public final class RaceFlyoverView: ScreenSaverView {
         guard window != nil, !isIdleScreen, !superseded else { return }
         FrameStats.shared = stats
         if dt > 0 { stats.frame(interval: dt) }
+        if let engine {
+            let landmarksReady = !config.showLandmarks || liveMap == nil || LandmarkStore.shared.isResolved(engine.course)
+            engine.sceneReady = (liveMap?.isSettled ?? true) && landmarksReady
+        }
+        let wasIntro = engine?.phase == .intro, introTime = engine?.phaseTime ?? 0
         if !paused { engine?.step(min(0.25, dt)) }
+        if wasIntro, let engine, engine.phase == .running {
+            let held = max(0, introTime - FlyoverEngine.introDuration)
+            MapFlyoverView.log.notice("\(engine.course.id, privacy: .public): run started after waiting \(String(format: "%.1f", held), privacy: .public) s for the scene to load (ready=\(engine.sceneReady, privacy: .public); map: \(self.liveMap?.loadState ?? "none", privacy: .public); landmarks=\(LandmarkStore.shared.isResolved(engine.course), privacy: .public))")
+        }
         retryLiveMapIfNewCourse()
         if let leader = leader, let lead = leader.engine, let engine {
             engine.sync(to: lead, lag: time - leader.lastTick)

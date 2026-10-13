@@ -49,6 +49,9 @@ final class LandmarkStore {
         return []
     }
 
+    /// Whether the course's landmarks have been found (or loaded from disk).
+    func isResolved(_ course: Course) -> Bool { results[course.id] != nil }
+
     /// Stable across launches (Swift's hashValue isn't), so the disk cache is found again.
     private func cacheKey(_ c: Course) -> String {
         var h: UInt32 = 5381
