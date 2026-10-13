@@ -2,7 +2,7 @@
 
 A Mac screensaver that flies along the world's big marathon courses, so you learn the route before race day.
 
-![Race Flyover on the London Marathon course](docs/screenshots/demo.gif)
+![Race Flyover in Apple Maps 3D, leaving Central Park on the New York City Marathon course](docs/screenshots/demo.gif)
 
 ## Features
 
