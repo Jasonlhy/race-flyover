@@ -18,29 +18,12 @@ A Mac screensaver that flies along the world's big marathon courses, so you lear
 - **Settings for everything**: which races to play, how long a lap takes (2 minutes to 4 hours),
   km or miles, pin and trail colours, and which panels to show.
 
-| | |
-|---|---|
-| ![London over Apple Maps](docs/screenshots/apple-maps-london.jpg) | ![Boston: a pulse at a water station](docs/screenshots/pulse-boston.jpg) |
-| **London** in Apple Maps | **Boston**: the pin pulses at a water station |
-| ![Tokyo in the Neon Grid style](docs/screenshots/neon-tokyo.jpg) | ![Chicago finish card](docs/screenshots/finish-chicago.jpg) |
-| **Tokyo** in the Neon Grid style | **Chicago**: the finish card |
-
 ## Requirements
 
 - macOS 14 Sonoma or later, on Apple silicon or Intel.
 - macOS 26 or later for the Liquid Glass panels.
 - An internet connection for the Apple Maps styles, place names and landmarks. The drawn styles work offline.
-- Xcode or Apple's Command Line Tools, if you build it yourself.
-
-## Install
-
-1. Download **RaceFlyover-….zip** from the [Releases](../../releases) page and unzip it.
-2. Double-click **RaceFlyover.saver**.
-3. If macOS says it can't check the file for malware, open **System Settings › Privacy & Security**,
-   click **Open Anyway**, then double-click the file again. This happens because the build isn't
-   notarised by Apple.
-4. Open **System Settings › Screen Saver**, scroll to **Other** and choose **Race Flyover**.
-   Click **Options…** to change the settings.
+- Xcode or Apple's Command Line Tools to build it.
 
 ## Build
 
@@ -49,6 +32,9 @@ A Mac screensaver that flies along the world's big marathon courses, so you lear
 ./build.sh preview    # build and open it in a window
 ./build.sh release    # build and zip it for a GitHub release
 ```
+
+After installing, open **System Settings › Screen Saver**, scroll to **Other** and choose **Race Flyover**.
+Click **Options…** to change the settings.
 
 In the preview window: **Space** pauses, **← / →** jumps 1 km, **N** goes to the next course.
 
