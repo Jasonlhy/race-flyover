@@ -7,19 +7,18 @@
       buildImplicitDependencies = "YES">
       <BuildActionEntries>
          <BuildActionEntry
-            buildForTesting = "NO"
+            buildForTesting = "YES"
             buildForRunning = "YES"
-            buildForProfiling = "NO"
-            buildForArchiving = "NO"
-            buildForAnalyzing = "NO"
-            buildableReference =
-               "&lt;BuildableReference
-                  BuildableIdentifier = &quot;primary&quot;
-                  BlueprintIdentifier = "9A7C6F94F2F54E3AB29F47FA"
-                  BuildableName = "RaceFlyoverPreview.app"
-                  BlueprintName = "RaceFlyoverPreview"
-                  ReferencedContainer = "container:RaceFlyoverPreview.xcodeproj">
-               &lt;/BuildableReference&gt;">
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "9A7C6F94F2F54E3AB29F47FA"
+               BuildableName = "RaceFlyoverPreview.app"
+               BlueprintName = "RaceFlyoverPreview"
+               ReferencedContainer = "container:RaceFlyoverPreview.xcodeproj">
+            </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>

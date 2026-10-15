@@ -5,7 +5,7 @@ configs:
   Debug: debug
   Release: release
 settings:
-  INFOPLIST_FILE: Resources/Info.plist
+  INFOPLIST_FILE: Resources/Info-Preview.plist
   MACOSX_DEPLOYMENT_TARGET: "14.0"
 targets:
   RaceFlyoverPreview:
