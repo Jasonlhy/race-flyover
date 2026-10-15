@@ -1,0 +1,563 @@
+// !$*UTF8*$!
+{
+    archiveVersion = 1;
+    classes = {
+    };
+    objectVersion = 56;
+    objects = {
+        0A72D1A13A7744E0A9A3F6B8B /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6B8B /* main.swift */;
+        };
+        0A72D1A13A7744E0A9A3F6B8C /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6B8C /* AreaNamer.swift */;
+        };
+        0A72D1A13A7744E0A9A3F6B8D /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6B8D /* ConfigSheetController.swift */;
+        };
+        0A72D1A13A7744E0A9A3F6B8E /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6B8E /* Course.swift */;
+        };
+        0A72D1A13A7744E0A9A3F6B8F /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6B90 /* Drawing.swift */;
+        };
+        0A72D1A13A7744E0A9A3F6B91 /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6B91 /* FlyoverEngine.swift */;
+        };
+        0A72D1A13A7744E0A9A3F6B92 /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6B92 /* FrameStats.swift */;
+        };
+        0A72D1A13A7744E0A9A3F6B93 /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6B93 /* HUDOverlay.swift */;
+        };
+        0A72D1A13A7744E0A9A3F6B94 /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6B94 /* HUDRenderer.swift */;
+        };
+        0A72D1A13A7744E0A9A3F6B95 /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6B95 /* Landmarks.swift */;
+        };
+        0A72D1A13A7744E0A9A3F6B96 /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6B96 /* MapFlyoverView.swift */;
+        };
+        0A72D1A13A7744E0A9A3F6B97 /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6B97 /* MapVisibility.swift */;
+        };
+        0A72D1A13A7744E0A9A3F6B98 /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6B98 /* RaceFlyoverView.swift */;
+        };
+        0A72D1A13A7744E0A9A3F6B99 /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6B99 /* RouteOverlay.swift */;
+        };
+        0A72D1A13A7744E0A9A3F6B9A /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6B9A /* Settings.swift */;
+        };
+        0A72D1A13A7744E0A9A3F6B9B /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6B9B /* StylizedView.swift */;
+        };
+        0A72D1A13A7744E0A9A3F6B9C /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6B9C /* Theme.swift */;
+        };
+        0A72D1A13A7744E0A9A3F6B9D /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6B9D /* TileGround.swift */;
+        };
+        0A72D1A13A7744E0A9A3F6B9E /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6B9E /* Resources */;
+        };
+        0A72D1A13A7744E0A9A3F6B9F /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6B9F /* AppKit.framework */;
+        };
+        0A72D1A13A7744E0A9A3F6BA0 /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6BA0 /* MapKit.framework */;
+        };
+        0A72D1A13A7744E0A9A3F6BA1 /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6BA1 /* CoreLocation.framework */;
+        };
+        0A72D1A13A7744E0A9A3F6BA2 /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6BA2 /* QuartzCore.framework */;
+        };
+        0A72D1A13A7744E0A9A3F6BA3 /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6BA3 /* Metal.framework */;
+        };
+        0A72D1A13A7744E0A9A3F6BA4 /* RaceFlyoverPreview */ = {
+            isa = PBXBuildFile;
+            fileRef = 2B72D1A13A7744E0A9A3F6BA4 /* ScreenSaver.framework */;
+        };
+        1008B3D9E82A647C6BA0B4B9A /* RaceFlyoverPreview */ = {
+            isa = PBXFileReference;
+            path = "RaceFlyoverPreview.app";
+            sourceTree = BUILT_PRODUCTS_DIR;
+            explicitFileType = wrapper.application;
+            includeInIndex = 0;
+        };
+        1D4D45BA947C43FB8A21A327 /* Project object */ = {
+            isa = PBXProject;
+            attributes = {
+                LastSwiftUpdateCheck = 1600;
+                LastUpgradeCheck = 1600;
+            };
+            buildConfigurationList = 4D1A6F1D16694D1A8F973F24 /* Project configuration list for PBXProject */;
+            compatibilityVersion = "Xcode 14.0";
+            developmentRegion = en;
+            hasScannedForEncodings = 0;
+            knownRegions = (
+                en,
+                Base,
+            );
+            mainGroup = 2D9D7A5F4CD243CA9F0C97B2 /* RaceFlyoverPreview */;
+            productRefGroup = 99A1F0377F574B6B985C70FA /* Products */;
+            projectDirPath = "";
+            projectRoot = "";
+            targets = (
+                9A7C6F94F2F54E3AB29F47FA /* RaceFlyoverPreview */,
+            );
+        };
+        1E3A0A68659F4B7EB0B8DB6E /* RaceFlyoverPreview */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = "main.swift";
+            sourceTree = "<group>";
+        };
+        1F0A0A0BE7B2417B8B34A5A9 /* Sources */ = {
+            isa = PBXGroup;
+            children = (
+                2B72D1A13A7744E0A9A3F6B8B /* main.swift */,
+                2B72D1A13A7744E0A9A3F6B8C /* AreaNamer.swift */,
+                2B72D1A13A7744E0A9A3F6B8D /* ConfigSheetController.swift */,
+                2B72D1A13A7744E0A9A3F6B8E /* Course.swift */,
+                2B72D1A13A7744E0A9A3F6B8F /* Drawing.swift */,
+                2B72D1A13A7744E0A9A3F6B90 /* FlyoverEngine.swift */,
+                2B72D1A13A7744E0A9A3F6B91 /* FrameStats.swift */,
+                2B72D1A13A7744E0A9A3F6B92 /* HUDOverlay.swift */,
+                2B72D1A13A7744E0A9A3F6B93 /* HUDRenderer.swift */,
+                2B72D1A13A7744E0A9A3F6B94 /* Landmarks.swift */,
+                2B72D1A13A7744E0A9A3F6B95 /* MapFlyoverView.swift */,
+                2B72D1A13A7744E0A9A3F6B96 /* MapVisibility.swift */,
+                2B72D1A13A7744E0A9A3F6B97 /* RaceFlyoverView.swift */,
+                2B72D1A13A7744E0A9A3F6B98 /* RouteOverlay.swift */,
+                2B72D1A13A7744E0A9A3F6B99 /* Settings.swift */,
+                2B72D1A13A7744E0A9A3F6B9A /* StylizedView.swift */,
+                2B72D1A13A7744E0A9A3F6B9B /* Theme.swift */,
+                2B72D1A13A7744E0A9A3F6B9C /* TileGround.swift */,
+            );
+            path = Sources;
+            sourceTree = "<group>";
+        };
+        1F8E1D6A1FDF4DA8A88E6A3A /* PBXFrameworksBuildPhase */ = {
+            isa = PBXFrameworksBuildPhase;
+            buildActionMask = 2147483647;
+            files = (
+                0A72D1A13A7744E0A9A3F6B9F /* AppKit.framework in Frameworks */,
+                0A72D1A13A7744E0A9A3F6BA0 /* MapKit.framework in Frameworks */,
+                0A72D1A13A7744E0A9A3F6BA1 /* CoreLocation.framework in Frameworks */,
+                0A72D1A13A7744E0A9A3F6BA2 /* QuartzCore.framework in Frameworks */,
+                0A72D1A13A7744E0A9A3F6BA3 /* Metal.framework in Frameworks */,
+                0A72D1A13A7744E0A9A3F6BA4 /* ScreenSaver.framework in Frameworks */,
+            );
+            runOnlyForDeploymentPostprocessing = 0;
+        };
+        1F9A0F57CA5E4B7D874BD514 /* PBXResourcesBuildPhase */ = {
+            isa = PBXResourcesBuildPhase;
+            buildActionMask = 2147483647;
+            files = (
+                0A72D1A13A7744E0A9A3F6B9E /* Info-Preview.plist in Resources */,
+                0A72D1A13A7744E0A9A3F6B9D /* Courses folder in Resources */,
+                0A72D1A13A7744E0A9A3F6B9C /* thumbnail.png in Resources */,
+                0A72D1A13A7744E0A9A3F6B9B /* thumbnail@2x.png in Resources */,
+            );
+            runOnlyForDeploymentPostprocessing = 0;
+        };
+        1FB4D7F2DEC3493CA350E4F1 /* PBXSourcesBuildPhase */ = {
+            isa = PBXSourcesBuildPhase;
+            buildActionMask = 2147483647;
+            files = (
+                0A72D1A13A7744E0A9A3F6B8B /* main.swift in Sources */,
+                0A72D1A13A7744E0A9A3F6B8C /* AreaNamer.swift in Sources */,
+                0A72D1A13A7744E0A9A3F6B8D /* ConfigSheetController.swift in Sources */,
+                0A72D1A13A7744E0A9A3F6B8E /* Course.swift in Sources */,
+                0A72D1A13A7744E0A9A3F6B8F /* Drawing.swift in Sources */,
+                0A72D1A13A7744E0A9A3F6B90 /* FlyoverEngine.swift in Sources */,
+                0A72D1A13A7744E0A9A3F6B91 /* FrameStats.swift in Sources */,
+                0A72D1A13A7744E0A9A3F6B92 /* HUDOverlay.swift in Sources */,
+                0A72D1A13A7744E0A9A3F6B93 /* HUDRenderer.swift in Sources */,
+                0A72D1A13A7744E0A9A3F6B94 /* Landmarks.swift in Sources */,
+                0A72D1A13A7744E0A9A3F6B95 /* MapFlyoverView.swift in Sources */,
+                0A72D1A13A7744E0A9A3F6B96 /* MapVisibility.swift in Sources */,
+                0A72D1A13A7744E0A9A3F6B97 /* RaceFlyoverView.swift in Sources */,
+                0A72D1A13A7744E0A9A3F6B98 /* RouteOverlay.swift in Sources */,
+                0A72D1A13A7744E0A9A3F6B99 /* Settings.swift in Sources */,
+                0A72D1A13A7744E0A9A3F6B9A /* StylizedView.swift in Sources */,
+                0A72D1A13A7744E0A9A3F6B9B /* Theme.swift in Sources */,
+                0A72D1A13A7744E0A9A3F6B9C /* TileGround.swift in Sources */,
+            );
+            runOnlyForDeploymentPostprocessing = 0;
+        };
+        2B72D1A13A7744E0A9A3F6B8B /* main.swift */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = "Sources/Preview/main.swift";
+            sourceTree = "<group>";
+        };
+        2B72D1A13A7744E0A9A3F6B8C /* AreaNamer.swift */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = "Sources/RaceFlyover/AreaNamer.swift";
+            sourceTree = "<group>";
+        };
+        2B72D1A13A7744E0A9A3F6B8D /* ConfigSheetController.swift */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = "Sources/RaceFlyover/ConfigSheetController.swift";
+            sourceTree = "<group>";
+        };
+        2B72D1A13A7744E0A9A3F6B8E /* Course.swift */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = "Sources/RaceFlyover/Course.swift";
+            sourceTree = "<group>";
+        };
+        2B72D1A13A7744E0A9A3F6B8F /* Drawing.swift */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = "Sources/RaceFlyover/Drawing.swift";
+            sourceTree = "<group>";
+        };
+        2B72D1A13A7744E0A9A3F6B90 /* FlyoverEngine.swift */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = "Sources/RaceFlyover/FlyoverEngine.swift";
+            sourceTree = "<group>";
+        };
+        2B72D1A13A7744E0A9A3F6B91 /* FrameStats.swift */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = "Sources/RaceFlyover/FrameStats.swift";
+            sourceTree = "<group>";
+        };
+        2B72D1A13A7744E0A9A3F6B92 /* HUDOverlay.swift */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = "Sources/RaceFlyover/HUDOverlay.swift";
+            sourceTree = "<group>";
+        };
+        2B72D1A13A7744E0A9A3F6B93 /* HUDRenderer.swift */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = "Sources/RaceFlyover/HUDRenderer.swift";
+            sourceTree = "<group>";
+        };
+        2B72D1A13A7744E0A9A3F6B94 /* Landmarks.swift */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = "Sources/RaceFlyover/Landmarks.swift";
+            sourceTree = "<group>";
+        };
+        2B72D1A13A7744E0A9A3F6B95 /* MapFlyoverView.swift */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = "Sources/RaceFlyover/MapFlyoverView.swift";
+            sourceTree = "<group>";
+        };
+        2B72D1A13A7744E0A9A3F6B96 /* MapVisibility.swift */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = "Sources/RaceFlyover/MapVisibility.swift";
+            sourceTree = "<group>";
+        };
+        2B72D1A13A7744E0A9A3F6B97 /* RaceFlyoverView.swift */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = "Sources/RaceFlyover/RaceFlyoverView.swift";
+            sourceTree = "<group>";
+        };
+        2B72D1A13A7744E0A9A3F6B98 /* RouteOverlay.swift */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = "Sources/RaceFlyover/RouteOverlay.swift";
+            sourceTree = "<group>";
+        };
+        2B72D1A13A7744E0A9A3F6B99 /* Settings.swift */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = "Sources/RaceFlyover/Settings.swift";
+            sourceTree = "<group>";
+        };
+        2B72D1A13A7744E0A9A3F6B9A /* StylizedView.swift */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = "Sources/RaceFlyover/StylizedView.swift";
+            sourceTree = "<group>";
+        };
+        2B72D1A13A7744E0A9A3F6B9B /* Theme.swift */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = "Sources/RaceFlyover/Theme.swift";
+            sourceTree = "<group>";
+        };
+        2B72D1A13A7744E0A9A3F6B9C /* TileGround.swift */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = "Sources/RaceFlyover/TileGround.swift";
+            sourceTree = "<group>";
+        };
+        2B72D1A13A7744E0A9A3F6B9D /* Info-Preview.plist */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = text.plist.xml;
+            path = "Resources/Info-Preview.plist";
+            sourceTree = "<group>";
+        };
+        2B72D1A13A7744E0A9A3F6B9E /* Courses */ = {
+            isa = PBXFileReference;
+            path = "Resources/Courses";
+            sourceTree = "<group>";
+            lastKnownFileType = folder;
+        };
+        2B72D1A13A7744E0A9A3F6B9F /* thumbnail.png */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = image.png;
+            path = "Resources/thumbnail.png";
+            sourceTree = "<group>";
+        };
+        2B72D1A13A7744E0A9A3F6BA0 /* thumbnail@2x.png */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = image.png;
+            path = "Resources/thumbnail@2x.png";
+            sourceTree = "<group>";
+        };
+        2B72D1A13A7744E0A9A3F6BA1 /* AppKit.framework */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = wrapper.framework;
+            name = AppKit.framework;
+            path = "/System/Library/Frameworks/AppKit.framework";
+            sourceTree = SDKROOT;
+        };
+        2B72D1A13A7744E0A9A3F6BA2 /* MapKit.framework */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = wrapper.framework;
+            name = MapKit.framework;
+            path = "/System/Library/Frameworks/MapKit.framework";
+            sourceTree = SDKROOT;
+        };
+        2B72D1A13A7744E0A9A3F6BA3 /* CoreLocation.framework */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = wrapper.framework;
+            name = CoreLocation.framework;
+            path = "/System/Library/Frameworks/CoreLocation.framework";
+            sourceTree = SDKROOT;
+        };
+        2B72D1A13A7744E0A9A3F6BA4 /* QuartzCore.framework */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = wrapper.framework;
+            name = QuartzCore.framework;
+            path = "/System/Library/Frameworks/QuartzCore.framework";
+            sourceTree = SDKROOT;
+        };
+        2B72D1A13A7744E0A9A3F6BA5 /* Metal.framework */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = wrapper.framework;
+            name = Metal.framework;
+            path = "/System/Library/Frameworks/Metal.framework";
+            sourceTree = SDKROOT;
+        };
+        2B72D1A13A7744E0A9A3F6BA6 /* ScreenSaver.framework */ = {
+            isa = PBXFileReference;
+            lastKnownFileType = wrapper.framework;
+            name = ScreenSaver.framework;
+            path = "/System/Library/Frameworks/ScreenSaver.framework";
+            sourceTree = SDKROOT;
+        };
+        2D9D7A5F4CD243CA9F0C97B2 /* RaceFlyoverPreview */ = {
+            isa = PBXGroup;
+            children = (
+                1F0A0A0BE7B2417B8B34A5A9 /* Sources */,
+                3E9BD505A83A4CC783A5D68C /* Resources */,
+                5B0AF2720F77466D93BB4A77 /* Frameworks */,
+                99A1F0377F574B6B985C70FA /* Products */,
+            );
+            sourceTree = "<group>";
+        };
+        31AD4D68B4F640DA8E4F3A1B /* Debug */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                ALWAYS_SEARCH_USER_PATHS = NO;
+                CLANG_ENABLE_OBJC_ARC = YES;
+                CODE_SIGN_STYLE = Automatic;
+                CURRENT_PROJECT_VERSION = 1;
+                GENERATE_INFOPLIST_FILE = NO;
+                INFOPLIST_FILE = "Resources/Info-Preview.plist";
+                LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
+                MACOSX_DEPLOYMENT_TARGET = 14.0;
+                MARKETING_VERSION = 1.0;
+                PRODUCT_BUNDLE_IDENTIFIER = "com.raceflyover.preview";
+                PRODUCT_NAME = "RaceFlyoverPreview";
+                SDKROOT = macosx;
+                SWIFT_VERSION = 5.0;
+            };
+            name = Debug;
+        };
+        3E9BD505A83A4CC783A5D68C /* Resources */ = {
+            isa = PBXGroup;
+            children = (
+                2B72D1A13A7744E0A9A3F6B9D /* Info-Preview.plist */,
+                2B72D1A13A7744E0A9A3F6B9E /* Courses */,
+                2B72D1A13A7744E0A9A3F6B9F /* thumbnail.png */,
+                2B72D1A13A7744E0A9A3F6BA0 /* thumbnail@2x.png */,
+            );
+            path = Resources;
+            sourceTree = "<group>";
+        };
+        3EB9AE65F9DE4A24AF8D4AA9 /* Release */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                ALWAYS_SEARCH_USER_PATHS = NO;
+                CLANG_ENABLE_OBJC_ARC = YES;
+                CODE_SIGN_STYLE = Automatic;
+                CURRENT_PROJECT_VERSION = 1;
+                GENERATE_INFOPLIST_FILE = NO;
+                INFOPLIST_FILE = "Resources/Info-Preview.plist";
+                LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
+                MACOSX_DEPLOYMENT_TARGET = 14.0;
+                MARKETING_VERSION = 1.0;
+                PRODUCT_BUNDLE_IDENTIFIER = "com.raceflyover.preview";
+                PRODUCT_NAME = "RaceFlyoverPreview";
+                SDKROOT = macosx;
+                SWIFT_VERSION = 5.0;
+            };
+            name = Release;
+        };
+        4D1A6F1D16694D1A8F973F24 /* Project configuration list for PBXProject */ = {
+            isa = XCConfigurationList;
+            buildConfigurations = (
+                31AD4D68B4F640DA8E4F3A1B /* Debug */,
+                3EB9AE65F9DE4A24AF8D4AA9 /* Release */,
+            );
+            defaultConfigurationIsVisible = 0;
+            defaultConfigurationName = Release;
+        };
+        5B0AF2720F77466D93BB4A77 /* Frameworks */ = {
+            isa = PBXGroup;
+            children = (
+                2B72D1A13A7744E0A9A3F6BA1 /* AppKit.framework */,
+                2B72D1A13A7744E0A9A3F6BA2 /* MapKit.framework */,
+                2B72D1A13A7744E0A9A3F6BA3 /* CoreLocation.framework */,
+                2B72D1A13A7744E0A9A3F6BA4 /* QuartzCore.framework */,
+                2B72D1A13A7744E0A9A3F6BA5 /* Metal.framework */,
+                2B72D1A13A7744E0A9A3F6BA6 /* ScreenSaver.framework */,
+            );
+            name = Frameworks;
+            sourceTree = SDKROOT;
+        };
+        5D4A618FB4C44CC18A45E728 /* Build configuration list for PBXNativeTarget "RaceFlyoverPreview" */ = {
+            isa = XCConfigurationList;
+            buildConfigurations = (
+                7A21E6F90B9449D399B0ADFD /* Debug */,
+                85F5B52A4D9F43F1AA32A17E /* Release */,
+            );
+            defaultConfigurationIsVisible = 0;
+            defaultConfigurationName = Release;
+        };
+        7A21E6F90B9449D399B0ADFD /* Debug */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+                CODE_SIGN_STYLE = Automatic;
+                CURRENT_PROJECT_VERSION = 1;
+                GENERATE_INFOPLIST_FILE = NO;
+                INFOPLIST_FILE = "Resources/Info-Preview.plist";
+                LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
+                MACOSX_DEPLOYMENT_TARGET = 14.0;
+                MARKETING_VERSION = 1.0;
+                PRODUCT_BUNDLE_IDENTIFIER = "com.raceflyover.preview";
+                PRODUCT_NAME = "RaceFlyoverPreview";
+                SDKROOT = macosx;
+                SWIFT_VERSION = 5.0;
+            };
+            name = Debug;
+        };
+        85F5B52A4D9F43F1AA32A17E /* Release */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+                CODE_SIGN_STYLE = Automatic;
+                CURRENT_PROJECT_VERSION = 1;
+                GENERATE_INFOPLIST_FILE = NO;
+                INFOPLIST_FILE = "Resources/Info-Preview.plist";
+                LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
+                MACOSX_DEPLOYMENT_TARGET = 14.0;
+                MARKETING_VERSION = 1.0;
+                PRODUCT_BUNDLE_IDENTIFIER = "com.raceflyover.preview";
+                PRODUCT_NAME = "RaceFlyoverPreview";
+                SDKROOT = macosx;
+                SWIFT_VERSION = 5.0;
+            };
+            name = Release;
+        };
+        99A1F0377F574B6B985C70FA /* Products */ = {
+            isa = PBXGroup;
+            children = (
+                1008B3D9E82A647C6BA0B4B9A /* RaceFlyoverPreview.app */,
+            );
+            name = Products;
+            sourceTree = "<group>";
+        };
+        9A7C6F94F2F54E3AB29F47FA /* RaceFlyoverPreview */ = {
+            isa = PBXNativeTarget;
+            buildConfigurationList = 5D4A618FB4C44CC18A45E728 /* Build configuration list for PBXNativeTarget "RaceFlyoverPreview" */;
+            buildPhases = (
+                1FB4D7F2DEC3493CA350E4F1 /* PBXSourcesBuildPhase */,
+                1F8E1D6A1FDF4DA8A88E6A3A /* PBXFrameworksBuildPhase */,
+                1F9A0F57CA5E4B7D874BD514 /* PBXResourcesBuildPhase */,
+            );
+            buildRules = (
+            );
+            dependencies = (
+            );
+            name = RaceFlyoverPreview;
+            productName = RaceFlyoverPreview;
+            productReference = 1008B3D9E82A647C6BA0B4B9A /* RaceFlyoverPreview.app */;
+            productType = "com.apple.product-type.application";
+        };
+        B7D24E1001E844AAF81D80BF /* PBXContainerItemProxy */ = {
+            isa = PBXContainerItemProxy;
+            containerPortal = 1D4D45BA947C43FB8A21A327 /* Project object */;
+            proxyType = 1;
+            remoteGlobalIDString = 9A7C6F94F2F54E3AB29F47FA;
+            remoteInfo = RaceFlyoverPreview;
+        };
+        C8D2BEA53BB64AA2B5B95A51 /* XCScheme */ = {
+            isa = PBXFileReference;
+            path = "RaceFlyoverPreview.xcscheme";
+            sourceTree = "<group>";
+        };
+        D1A7F9E006114B53B9BBB280 /* Project */ = {
+            isa = PBXGroup;
+            children = (
+                1D4D45BA947C43FB8A21A327 /* Project object */,
+            );
+            sourceTree = "<group>";
+        };
+    };
+    rootObject = 1D4D45BA947C43FB8A21A327 /* Project object */;
+}
