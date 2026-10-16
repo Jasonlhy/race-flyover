@@ -52,5 +52,4 @@ The preview app can also save still images and GIFs; its options are listed at t
   Always check your race's official course map.
 - **Course data.** Most routes and stations come from
   [distanzrunning/gpx](https://github.com/distanzrunning/gpx), which has no stated licence. Kyoto and
-  Hong Kong routes come from [GoAndRace](https://www.goandrace.com); Kyoto's stations come from the
-  official 2025 runner guide, and Hong Kong's are estimated. Please keep this project for personal use.
+  Hong Kong routes come from [GoAndRace](https://www.goandrace.com). 
