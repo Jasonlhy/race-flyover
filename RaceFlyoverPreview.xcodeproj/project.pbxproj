@@ -1,0 +1,348 @@
+// !$*UTF8*$!
+{
+    archiveVersion = 1;
+    classes = {
+    };
+    objectVersion = 56;
+    objects = {
+
+/* Begin PBXBuildFile section */
+        BB0000000000000000000001 /* AreaNamer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000001 /* AreaNamer.swift */; };
+        BB0000000000000000000002 /* ConfigSheetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000002 /* ConfigSheetController.swift */; };
+        BB0000000000000000000003 /* Course.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000003 /* Course.swift */; };
+        BB0000000000000000000004 /* Drawing.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000004 /* Drawing.swift */; };
+        BB0000000000000000000005 /* FlyoverEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000005 /* FlyoverEngine.swift */; };
+        BB0000000000000000000006 /* FrameStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000006 /* FrameStats.swift */; };
+        BB0000000000000000000007 /* HUDOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000007 /* HUDOverlay.swift */; };
+        BB0000000000000000000008 /* HUDRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000008 /* HUDRenderer.swift */; };
+        BB0000000000000000000009 /* Landmarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000009 /* Landmarks.swift */; };
+        BB000000000000000000000A /* MapFlyoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000000A /* MapFlyoverView.swift */; };
+        BB000000000000000000000B /* MapVisibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000000B /* MapVisibility.swift */; };
+        BB000000000000000000000C /* RaceFlyoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000000C /* RaceFlyoverView.swift */; };
+        BB000000000000000000000D /* RouteOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000000D /* RouteOverlay.swift */; };
+        BB000000000000000000000E /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000000E /* Settings.swift */; };
+        BB000000000000000000000F /* StylizedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000000F /* StylizedView.swift */; };
+        BB0000000000000000000010 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000010 /* Theme.swift */; };
+        BB0000000000000000000011 /* TileGround.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000011 /* TileGround.swift */; };
+        BB0000000000000000000012 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000012 /* main.swift */; };
+        BB0000000000000000000013 /* Courses in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000014 /* Courses */; };
+        BB0000000000000000000014 /* thumbnail.png in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000015 /* thumbnail.png */; };
+        BB0000000000000000000015 /* thumbnail@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000016 /* thumbnail@2x.png */; };
+        BB0000000000000000000016 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000017 /* AppKit.framework */; };
+        BB0000000000000000000017 /* MapKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000018 /* MapKit.framework */; };
+        BB0000000000000000000018 /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000019 /* CoreLocation.framework */; };
+        BB0000000000000000000019 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001A /* QuartzCore.framework */; };
+        BB000000000000000000001A /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001B /* Metal.framework */; };
+        BB000000000000000000001B /* ScreenSaver.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001C /* ScreenSaver.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+        1008B3D9E82A647C6BA0B4B9A /* RaceFlyoverPreview.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RaceFlyoverPreview.app; sourceTree = BUILT_PRODUCTS_DIR; };
+        AA0000000000000000000001 /* AreaNamer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AreaNamer.swift; sourceTree = "<group>"; };
+        AA0000000000000000000002 /* ConfigSheetController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigSheetController.swift; sourceTree = "<group>"; };
+        AA0000000000000000000003 /* Course.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Course.swift; sourceTree = "<group>"; };
+        AA0000000000000000000004 /* Drawing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Drawing.swift; sourceTree = "<group>"; };
+        AA0000000000000000000005 /* FlyoverEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlyoverEngine.swift; sourceTree = "<group>"; };
+        AA0000000000000000000006 /* FrameStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameStats.swift; sourceTree = "<group>"; };
+        AA0000000000000000000007 /* HUDOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HUDOverlay.swift; sourceTree = "<group>"; };
+        AA0000000000000000000008 /* HUDRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HUDRenderer.swift; sourceTree = "<group>"; };
+        AA0000000000000000000009 /* Landmarks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Landmarks.swift; sourceTree = "<group>"; };
+        AA000000000000000000000A /* MapFlyoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapFlyoverView.swift; sourceTree = "<group>"; };
+        AA000000000000000000000B /* MapVisibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapVisibility.swift; sourceTree = "<group>"; };
+        AA000000000000000000000C /* RaceFlyoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaceFlyoverView.swift; sourceTree = "<group>"; };
+        AA000000000000000000000D /* RouteOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteOverlay.swift; sourceTree = "<group>"; };
+        AA000000000000000000000E /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
+        AA000000000000000000000F /* StylizedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StylizedView.swift; sourceTree = "<group>"; };
+        AA0000000000000000000010 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+        AA0000000000000000000011 /* TileGround.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TileGround.swift; sourceTree = "<group>"; };
+        AA0000000000000000000012 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+        AA0000000000000000000013 /* Info-Preview.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info-Preview.plist"; sourceTree = "<group>"; };
+        AA0000000000000000000014 /* Courses */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Courses; sourceTree = "<group>"; };
+        AA0000000000000000000015 /* thumbnail.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = thumbnail.png; sourceTree = "<group>"; };
+        AA0000000000000000000016 /* thumbnail@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "thumbnail@2x.png"; sourceTree = "<group>"; };
+        AA0000000000000000000017 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+        AA0000000000000000000018 /* MapKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MapKit.framework; path = System/Library/Frameworks/MapKit.framework; sourceTree = SDKROOT; };
+        AA0000000000000000000019 /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
+        AA000000000000000000001A /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+        AA000000000000000000001B /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+        AA000000000000000000001C /* ScreenSaver.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ScreenSaver.framework; path = System/Library/Frameworks/ScreenSaver.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+        1F8E1D6A1FDF4DA8A88E6A3A /* Frameworks */ = {
+            isa = PBXFrameworksBuildPhase;
+            buildActionMask = 2147483647;
+            files = (
+                BB0000000000000000000016 /* AppKit.framework in Frameworks */,
+                BB0000000000000000000017 /* MapKit.framework in Frameworks */,
+                BB0000000000000000000018 /* CoreLocation.framework in Frameworks */,
+                BB0000000000000000000019 /* QuartzCore.framework in Frameworks */,
+                BB000000000000000000001A /* Metal.framework in Frameworks */,
+                BB000000000000000000001B /* ScreenSaver.framework in Frameworks */,
+            );
+            runOnlyForDeploymentPostprocessing = 0;
+        };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+        2D9D7A5F4CD243CA9F0C97B2 /* RaceFlyoverPreview */ = {
+            isa = PBXGroup;
+            children = (
+                1F0A0A0BE7B2417B8B34A5A9 /* Sources */,
+                3E9BD505A83A4CC783A5D68C /* Resources */,
+                5B0AF2720F77466D93BB4A77 /* Frameworks */,
+                99A1F0377F574B6B985C70FA /* Products */,
+            );
+            sourceTree = "<group>";
+        };
+        1F0A0A0BE7B2417B8B34A5A9 /* Sources */ = {
+            isa = PBXGroup;
+            children = (
+                AA00000000000000000000D1 /* RaceFlyover */,
+                AA00000000000000000000D2 /* Preview */,
+            );
+            path = Sources;
+            sourceTree = "<group>";
+        };
+        AA00000000000000000000D1 /* RaceFlyover */ = {
+            isa = PBXGroup;
+            children = (
+                AA0000000000000000000001 /* AreaNamer.swift */,
+                AA0000000000000000000002 /* ConfigSheetController.swift */,
+                AA0000000000000000000003 /* Course.swift */,
+                AA0000000000000000000004 /* Drawing.swift */,
+                AA0000000000000000000005 /* FlyoverEngine.swift */,
+                AA0000000000000000000006 /* FrameStats.swift */,
+                AA0000000000000000000007 /* HUDOverlay.swift */,
+                AA0000000000000000000008 /* HUDRenderer.swift */,
+                AA0000000000000000000009 /* Landmarks.swift */,
+                AA000000000000000000000A /* MapFlyoverView.swift */,
+                AA000000000000000000000B /* MapVisibility.swift */,
+                AA000000000000000000000C /* RaceFlyoverView.swift */,
+                AA000000000000000000000D /* RouteOverlay.swift */,
+                AA000000000000000000000E /* Settings.swift */,
+                AA000000000000000000000F /* StylizedView.swift */,
+                AA0000000000000000000010 /* Theme.swift */,
+                AA0000000000000000000011 /* TileGround.swift */,
+            );
+            path = RaceFlyover;
+            sourceTree = "<group>";
+        };
+        AA00000000000000000000D2 /* Preview */ = {
+            isa = PBXGroup;
+            children = (
+                AA0000000000000000000012 /* main.swift */,
+            );
+            path = Preview;
+            sourceTree = "<group>";
+        };
+        3E9BD505A83A4CC783A5D68C /* Resources */ = {
+            isa = PBXGroup;
+            children = (
+                AA0000000000000000000013 /* Info-Preview.plist */,
+                AA0000000000000000000014 /* Courses */,
+                AA0000000000000000000015 /* thumbnail.png */,
+                AA0000000000000000000016 /* thumbnail@2x.png */,
+            );
+            path = Resources;
+            sourceTree = "<group>";
+        };
+        5B0AF2720F77466D93BB4A77 /* Frameworks */ = {
+            isa = PBXGroup;
+            children = (
+                AA0000000000000000000017 /* AppKit.framework */,
+                AA0000000000000000000018 /* MapKit.framework */,
+                AA0000000000000000000019 /* CoreLocation.framework */,
+                AA000000000000000000001A /* QuartzCore.framework */,
+                AA000000000000000000001B /* Metal.framework */,
+                AA000000000000000000001C /* ScreenSaver.framework */,
+            );
+            name = Frameworks;
+            sourceTree = "<group>";
+        };
+        99A1F0377F574B6B985C70FA /* Products */ = {
+            isa = PBXGroup;
+            children = (
+                1008B3D9E82A647C6BA0B4B9A /* RaceFlyoverPreview.app */,
+            );
+            name = Products;
+            sourceTree = "<group>";
+        };
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+        9A7C6F94F2F54E3AB29F47FA /* RaceFlyoverPreview */ = {
+            isa = PBXNativeTarget;
+            buildConfigurationList = 5D4A618FB4C44CC18A45E728 /* Build configuration list for PBXNativeTarget "RaceFlyoverPreview" */;
+            buildPhases = (
+                1FB4D7F2DEC3493CA350E4F1 /* Sources */,
+                1F8E1D6A1FDF4DA8A88E6A3A /* Frameworks */,
+                1F9A0F57CA5E4B7D874BD514 /* Resources */,
+            );
+            buildRules = (
+            );
+            dependencies = (
+            );
+            name = RaceFlyoverPreview;
+            productName = RaceFlyoverPreview;
+            productReference = 1008B3D9E82A647C6BA0B4B9A /* RaceFlyoverPreview.app */;
+            productType = "com.apple.product-type.application";
+        };
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+        1D4D45BA947C43FB8A21A327 /* Project object */ = {
+            isa = PBXProject;
+            attributes = {
+                BuildIndependentTargetsInParallel = YES;
+                LastSwiftUpdateCheck = 1600;
+                LastUpgradeCheck = 1600;
+                TargetAttributes = {
+                    9A7C6F94F2F54E3AB29F47FA = {
+                        CreatedOnToolsVersion = 16.0;
+                    };
+                };
+            };
+            buildConfigurationList = 4D1A6F1D16694D1A8F973F24 /* Build configuration list for PBXProject "RaceFlyoverPreview" */;
+            compatibilityVersion = "Xcode 14.0";
+            developmentRegion = en;
+            hasScannedForEncodings = 0;
+            knownRegions = (
+                en,
+                Base,
+            );
+            mainGroup = 2D9D7A5F4CD243CA9F0C97B2 /* RaceFlyoverPreview */;
+            productRefGroup = 99A1F0377F574B6B985C70FA /* Products */;
+            projectDirPath = "";
+            projectRoot = "";
+            targets = (
+                9A7C6F94F2F54E3AB29F47FA /* RaceFlyoverPreview */,
+            );
+        };
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+        1F9A0F57CA5E4B7D874BD514 /* Resources */ = {
+            isa = PBXResourcesBuildPhase;
+            buildActionMask = 2147483647;
+            files = (
+                BB0000000000000000000013 /* Courses in Resources */,
+                BB0000000000000000000014 /* thumbnail.png in Resources */,
+                BB0000000000000000000015 /* thumbnail@2x.png in Resources */,
+            );
+            runOnlyForDeploymentPostprocessing = 0;
+        };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+        1FB4D7F2DEC3493CA350E4F1 /* Sources */ = {
+            isa = PBXSourcesBuildPhase;
+            buildActionMask = 2147483647;
+            files = (
+                BB0000000000000000000001 /* AreaNamer.swift in Sources */,
+                BB0000000000000000000002 /* ConfigSheetController.swift in Sources */,
+                BB0000000000000000000003 /* Course.swift in Sources */,
+                BB0000000000000000000004 /* Drawing.swift in Sources */,
+                BB0000000000000000000005 /* FlyoverEngine.swift in Sources */,
+                BB0000000000000000000006 /* FrameStats.swift in Sources */,
+                BB0000000000000000000007 /* HUDOverlay.swift in Sources */,
+                BB0000000000000000000008 /* HUDRenderer.swift in Sources */,
+                BB0000000000000000000009 /* Landmarks.swift in Sources */,
+                BB000000000000000000000A /* MapFlyoverView.swift in Sources */,
+                BB000000000000000000000B /* MapVisibility.swift in Sources */,
+                BB000000000000000000000C /* RaceFlyoverView.swift in Sources */,
+                BB000000000000000000000D /* RouteOverlay.swift in Sources */,
+                BB000000000000000000000E /* Settings.swift in Sources */,
+                BB000000000000000000000F /* StylizedView.swift in Sources */,
+                BB0000000000000000000010 /* Theme.swift in Sources */,
+                BB0000000000000000000011 /* TileGround.swift in Sources */,
+                BB0000000000000000000012 /* main.swift in Sources */,
+            );
+            runOnlyForDeploymentPostprocessing = 0;
+        };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+        31AD4D68B4F640DA8E4F3A1B /* Debug */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                ALWAYS_SEARCH_USER_PATHS = NO;
+                CLANG_ENABLE_OBJC_ARC = YES;
+                CODE_SIGN_STYLE = Automatic;
+                CURRENT_PROJECT_VERSION = 1;
+                MACOSX_DEPLOYMENT_TARGET = 14.0;
+                MARKETING_VERSION = 1.0;
+                SDKROOT = macosx;
+                SWIFT_VERSION = 5.0;
+            };
+            name = Debug;
+        };
+        3EB9AE65F9DE4A24AF8D4AA9 /* Release */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                ALWAYS_SEARCH_USER_PATHS = NO;
+                CLANG_ENABLE_OBJC_ARC = YES;
+                CODE_SIGN_STYLE = Automatic;
+                CURRENT_PROJECT_VERSION = 1;
+                MACOSX_DEPLOYMENT_TARGET = 14.0;
+                MARKETING_VERSION = 1.0;
+                SDKROOT = macosx;
+                SWIFT_VERSION = 5.0;
+            };
+            name = Release;
+        };
+        7A21E6F90B9449D399B0ADFD /* Debug */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                CODE_SIGN_ENTITLEMENTS = "";
+                CODE_SIGN_STYLE = Automatic;
+                CURRENT_PROJECT_VERSION = 1;
+                GENERATE_INFOPLIST_FILE = NO;
+                INFOPLIST_FILE = "Resources/Info-Preview.plist";
+                LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
+                MARKETING_VERSION = 1.0;
+                PRODUCT_BUNDLE_IDENTIFIER = "com.raceflyover.preview";
+                PRODUCT_NAME = RaceFlyoverPreview;
+            };
+            name = Debug;
+        };
+        85F5B52A4D9F43F1AA32A17E /* Release */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                CODE_SIGN_ENTITLEMENTS = "";
+                CODE_SIGN_STYLE = Automatic;
+                CURRENT_PROJECT_VERSION = 1;
+                GENERATE_INFOPLIST_FILE = NO;
+                INFOPLIST_FILE = "Resources/Info-Preview.plist";
+                LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
+                MARKETING_VERSION = 1.0;
+                PRODUCT_BUNDLE_IDENTIFIER = "com.raceflyover.preview";
+                PRODUCT_NAME = RaceFlyoverPreview;
+            };
+            name = Release;
+        };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+        4D1A6F1D16694D1A8F973F24 /* Build configuration list for PBXProject "RaceFlyoverPreview" */ = {
+            isa = XCConfigurationList;
+            buildConfigurations = (
+                31AD4D68B4F640DA8E4F3A1B /* Debug */,
+                3EB9AE65F9DE4A24AF8D4AA9 /* Release */,
+            );
+            defaultConfigurationIsVisible = 0;
+            defaultConfigurationName = Release;
+        };
+        5D4A618FB4C44CC18A45E728 /* Build configuration list for PBXNativeTarget "RaceFlyoverPreview" */ = {
+            isa = XCConfigurationList;
+            buildConfigurations = (
+                7A21E6F90B9449D399B0ADFD /* Debug */,
+                85F5B52A4D9F43F1AA32A17E /* Release */,
+            );
+            defaultConfigurationIsVisible = 0;
+            defaultConfigurationName = Release;
+        };
+/* End XCConfigurationList section */
+    };
+    rootObject = 1D4D45BA947C43FB8A21A327 /* Project object */;
+}

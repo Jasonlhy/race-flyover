@@ -1,0 +1,29 @@
+name: RaceFlyoverPreview
+options:
+  bundleIdPrefix: com.raceflyover
+configs:
+  Debug: debug
+  Release: release
+settings:
+  INFOPLIST_FILE: Resources/Info-Preview.plist
+  MACOSX_DEPLOYMENT_TARGET: "14.0"
+targets:
+  RaceFlyoverPreview:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.raceflyover.preview
+      PRODUCT_NAME: RaceFlyoverPreview
+    sources:
+      - path: Sources/RaceFlyover
+      - path: Sources/Preview
+    resources:
+      - Resources
+    frameworks:
+      - AppKit
+      - MapKit
+      - CoreLocation
+      - QuartzCore
+      - Metal
+      - ScreenSaver
