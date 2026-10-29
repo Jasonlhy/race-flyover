@@ -11,8 +11,20 @@ cd "${0:A:h}/.."
 BUILD=build
 SAVER="$BUILD/RaceFlyover.saver"
 IDENTITY=${1:-}
+PKG_SCRIPTS="$BUILD/pkg-scripts"
 
 [[ -d "$SAVER" ]] || { echo "error: $SAVER not found — run ./build.sh first" >&2; exit 1; }
+
+rm -rf "$PKG_SCRIPTS"
+mkdir -p "$PKG_SCRIPTS"
+cat > "$PKG_SCRIPTS/postinstall" <<'EOF'
+#!/bin/zsh
+set -e
+killall legacyScreenSaver WallpaperLegacyExtension WallpaperAgent 2>/dev/null || true
+osascript -e 'tell application "System Settings" to quit' 2>/dev/null || true
+exit 0
+EOF
+chmod 755 "$PKG_SCRIPTS/postinstall"
 
 VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo dev)
 # pkgbuild wants a numeric version: strip a leading v and anything from the
@@ -28,7 +40,8 @@ rm -f "$PKG"
 args=(--component "$SAVER"
       --install-location "/Library/Screen Savers"
       --identifier com.raceflyover.RaceFlyover
-      --version "$PKG_VERSION")
+      --version "$PKG_VERSION"
+      --scripts "$PKG_SCRIPTS")
 [[ -n "$IDENTITY" ]] && args+=(--sign "$IDENTITY")
 
 pkgbuild "${args[@]}" "$PKG"
